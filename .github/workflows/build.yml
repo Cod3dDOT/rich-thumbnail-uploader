@@ -1,0 +1,77 @@
+# Based on the template in https://github.com/FedericoPonzi/rust-ci
+name: Build binaries
+
+on:
+    push:
+        tags:
+            - "*"
+    workflow_dispatch:
+
+jobs:
+    check-client-id:
+        name: Check if imgur client id secret exist
+        runs-on: ubuntu-latest
+        env:
+            IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+        steps:
+            - name: A/B Check
+              if: ${{ env.IMGUR_CLIENT_ID == ''}}
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      core.setFailed('IMGUR_CLIENT_ID secret not set!')
+    style:
+        name: Check Style
+        needs: [check-client-id]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install rust
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  toolchain: stable
+                  components: rustfmt
+
+            - name: cargo fmt -- --check
+              run: cargo fmt --all -- --check
+
+    create-release:
+        name: Build
+        needs: [style]
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                target: [x86_64-pc-windows-gnu]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build target
+              uses: houseabsolute/actions-rust-cross@v1
+              with:
+                  target: ${{ matrix.target }}
+                  args: "--release --locked"
+              env:
+                  IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+
+            - name: Run UPX to reduce binary size
+              uses: crazy-max/ghaction-upx@v3
+              with:
+                  version: latest
+                  files: "target/${{ matrix.target }}/release/rich-thumbnail-uploader.exe"
+                  args: -q --best --lzma
+
+            - name: Publish
+              if: github.event_name != 'workflow_dispatch'
+              uses: houseabsolute/actions-rust-release@v0
+              with:
+                  executable-name: rich-thumbnail-uploader.exe
+                  changes-file: CHANGES.md
+                  target: ${{ matrix.target }}
+
+            - name: Upload artifact
+              if: github.event_name == 'workflow_dispatch'
+              uses: actions/upload-artifact@v4
+              with:
+                  name: rich-thumbnail-uploader.exe
+                  path: "target/${{ matrix.target }}/release/rich-thumbnail-uploader.exe"
