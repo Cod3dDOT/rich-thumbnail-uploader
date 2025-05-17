@@ -83,7 +83,7 @@ jobs:
           path: bin
 
       - name: Download test image
-        run: curl -L -o example.png https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png
+        run: curl -L -o example.png https://upload.wikimedia.org/wikipedia/commons/d/d1/Square.png
 
       - name: Compute hash of original image
         id: hash
@@ -96,7 +96,7 @@ jobs:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
         run: |
           echo "Testing Imgur upload..."
-          output=$(echo example.png | ./bin/rich-thumbnail-uploader.exe -d 128 -s imgur -f png)
+          output=$(echo example.png | ./bin/rich-thumbnail-uploader.exe -d 64 -s imgur -f png)
           echo "Output: $output"
           if [[ $? -ne 0 ]]; then
             echo "Executable exited with non-zero code!"
@@ -111,7 +111,7 @@ jobs:
         shell: bash
         run: |
           echo "Testing raw Catbox upload for hash match..."
-          output=$(echo example.png | ./bin/rich-thumbnail-uploader.exe -s catbox)
+          output=$(echo example.png | ./bin/rich-thumbnail-uploader.exe -d 100 -s catbox -f png)
           echo "Output: $output"
           if [[ $? -ne 0 ]]; then
             echo "Executable exited with non-zero code!"
