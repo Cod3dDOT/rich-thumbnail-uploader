@@ -17,14 +17,21 @@ pub struct Config {
 impl Config {
     pub fn new(options: &Cli) -> Result<Self, AppError> {
         // Get credentials from environment variables at compile time
-        let imgur_client_id = option_env!("IMGUR_CLIENT_ID");
+        let imgur_client_id_env = option_env!("IMGUR_CLIENT_ID");
 
         // use provided id if set, else use environment variable
-        let client_id: Option<String> = options.uid.clone().or(imgur_client_id.map(str::to_string));
+        let user_id: Option<String> = options.uid.clone();
+
+        let client_id = match options.service {
+            UploadServiceIdentifier::Imgur => {
+                user_id.clone().or(imgur_client_id_env.map(str::to_string))
+            }
+            UploadServiceIdentifier::Catbox => user_id,
+        };
 
         let config = Config {
             service: options.service,
-            client_id,
+            client_id: client_id,
             user_agent: UASTRING,
             image_format: options.format,
             image_dimensions: (options.dims, options.dims),
