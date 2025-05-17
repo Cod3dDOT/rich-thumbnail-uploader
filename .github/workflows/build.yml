@@ -127,7 +127,7 @@ jobs:
         run: |
             echo "Catbox raw upload test..."
 
-            output=$(echo test.png | ./bin/rich-thumbnail-uploader.exe -s catbox)
+            output=$(echo test.png | ./bin/rich-thumbnail-uploader.exe -d 800 -s catbox -f png)
             exit_code=$?
 
             echo "Output URL: $output"
@@ -164,13 +164,13 @@ jobs:
         shell: bash
         run: |
             echo "Checking test results..."
-            imgur_exit=${{ steps.imgur.outputs.exit_code }}
-            catbox_exit=${{ steps.catbox.outputs.exit_code }}
+            imgur_exit=${{ steps.imgur.outcome }}
+            catbox_exit=${{ steps.catbox.outcome }}
 
             echo "Imgur test exit code: $imgur_exit"
             echo "Catbox test exit code: $catbox_exit"
 
-            if [[ "$imgur_exit" != "0" || "$catbox_exit" != "0" ]]; then
+            if [[ "$imgur_exit" == "failure" || "$catbox_exit" == "failure" ]]; then
                 echo "One or more tests failed."
                 exit 1
             fi
