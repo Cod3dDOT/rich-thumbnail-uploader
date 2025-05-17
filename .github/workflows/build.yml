@@ -79,7 +79,8 @@ jobs:
       - name: Download built Windows binary
         uses: actions/download-artifact@v4
         with:
-          name: rich-thumbnail-uploader.exe
+          name: built-binary-x86_64-pc-windows-gnu
+          path: bin
 
       - name: Download test image
         run: curl -L -o test.png https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/June_odd-eyed-cat.jpg/320px-June_odd-eyed-cat.jpg
@@ -95,7 +96,7 @@ jobs:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
         run: |
           echo "Testing Imgur upload..."
-          output=$(./rich-thumbnail-uploader.exe -d 128 -s imgur -f png test.png)
+          output=$(echo test.png | ./bin/rich-thumbnail-uploader.exe -d 128 -s imgur -f png)
           echo "Output: $output"
           if [[ $? -ne 0 ]]; then
             echo "Executable exited with non-zero code!"
@@ -106,11 +107,11 @@ jobs:
             exit 1
           fi
 
-      - name: Test upload to Catbox with hash check
+      - name: Test Catbox upload (raw, for hash check)
         shell: bash
         run: |
-          echo "Testing Catbox upload..."
-          output=$(./rich-thumbnail-uploader.exe -d 128 -s catbox -f png test.png)
+          echo "Testing raw Catbox upload for hash match..."
+          output=$(echo test.png | ./bin/rich-thumbnail-uploader.exe -s catbox)
           echo "Output: $output"
           if [[ $? -ne 0 ]]; then
             echo "Executable exited with non-zero code!"
@@ -131,8 +132,6 @@ jobs:
             echo "Hash mismatch! Uploaded file content changed."
             exit 1
           fi
-
-
 
   create-release:
     name: Publish Release
