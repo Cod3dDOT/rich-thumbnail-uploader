@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    IO(#[from] std::io::Error),
 
     #[error("Image processing error: {0}")]
     Image(#[from] image::ImageError),
@@ -19,7 +19,4 @@ pub enum AppError {
 
     #[error("Configuration error: {0}")]
     Config(String),
-
-    #[error("Unsupported service: {0}")]
-    UnsupportedService(String),
 }

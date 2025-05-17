@@ -5,17 +5,14 @@ mod image_processor;
 mod models;
 mod uploaders;
 
-use std::io::{self, BufRead};
-use std::path::PathBuf;
-use std::process;
-
 use clap::Parser;
+use cli::read_filepath;
+use uploaders::upload;
 
 use crate::cli::{Cli, OutputFormat};
 use crate::config::Config;
 use crate::errors::AppError;
-use crate::image_processor::{create_thumbnail, ImageOptions};
-use crate::uploaders::get_uploader;
+use crate::image_processor::{create_thumbnail, ImageProcessingOptions};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -23,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
 
     // Initialize configuration
-    let config = Config::from_env()?;
+    let config = Config::new(&args)?;
 
     let input_file = read_filepath()?;
 
@@ -33,38 +30,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Create image processing options
-    let options = ImageOptions {
-        size: args.size,
-        format: cli::get_image_format(&args.service),
+    let options = ImageProcessingOptions {
+        size: config.image_dimensions.0,
+        format: config.image_format.to_image_format(),
     };
 
     // Process the image
     let thumbnail = create_thumbnail(&input_file.to_string_lossy(), &options)?;
 
-    // Get the appropriate uploader
-    let uploader = get_uploader(args.service.to_string().as_str(), &config)?;
-
     // Upload the image
-    let upload_result = uploader.upload(thumbnail, &options).await?;
+    let upload_result = upload(
+        config.service,
+        thumbnail,
+        config.client_id.unwrap_or_default(),
+        config.user_agent.to_string(),
+    )
+    .await?;
 
-    // Output the result based on requested format
+    // Output the result
     match args.output {
         OutputFormat::Url => println!("{}", upload_result),
     }
 
     Ok(())
-}
-
-fn read_filepath() -> Result<PathBuf, AppError> {
-    let stdin = io::stdin();
-    let mut lines = stdin.lock().lines();
-    let filepath = match lines.next() {
-        Some(line) => line?,
-        None => {
-            eprintln!("Error: Expected file path from stdin");
-            process::exit(1);
-        }
-    };
-
-    Ok(PathBuf::new().join(filepath.trim().to_string()))
 }

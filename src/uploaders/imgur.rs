@@ -1,42 +1,38 @@
 use async_trait::async_trait;
+use image::ImageFormat;
 use reqwest::multipart::{Form, Part};
 
 use crate::errors::AppError;
+use crate::image_processor::ProcessedImage;
 use crate::models::imgur::ImgurResponse;
 use crate::uploaders::UploadService;
 
-pub struct ImgurUploader {
-    client_id: String,
-}
+use super::UploadServiceIdentifier;
 
-impl ImgurUploader {
-    pub fn new(client_id: &str) -> Self {
-        ImgurUploader {
-            client_id: client_id.to_string(),
-        }
-    }
-}
+pub struct ImgurUploader;
 
 #[async_trait]
 impl UploadService for ImgurUploader {
     async fn upload(
-        &self,
-        image_data: Vec<u8>,
-        _options: &super::ImageOptions,
+        filename: String,
+        image: ProcessedImage,
+        client_id: String,
+        user_agent: String,
     ) -> Result<String, AppError> {
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder().user_agent(user_agent).build()?;
 
         // Create the multipart form
-        let part = Part::bytes(image_data)
-            .mime_str("image/png")
-            .map_err(|e| AppError::Upload(e.to_string()))?;
+        let part = Part::stream(image.data)
+            .mime_str(image.format.to_mime_type())
+            .map_err(|e| AppError::Upload(e.to_string()))?
+            .file_name(filename);
 
         let form = Form::new().part("image", part);
 
         // Make the request to Imgur API
         let response = client
             .post("https://api.imgur.com/3/image")
-            .header("Authorization", format!("Client-ID {}", self.client_id))
+            .header("Authorization", format!("Client-ID {}", client_id))
             .multipart(form)
             .send()
             .await?;
@@ -62,5 +58,13 @@ impl UploadService for ImgurUploader {
         }
 
         Ok(imgur_response.data.link)
+    }
+
+    fn identifier() -> UploadServiceIdentifier {
+        UploadServiceIdentifier::Imgur
+    }
+
+    fn formats() -> Vec<ImageFormat> {
+        vec![ImageFormat::Png]
     }
 }

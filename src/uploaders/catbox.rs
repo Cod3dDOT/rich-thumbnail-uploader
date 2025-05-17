@@ -1,33 +1,35 @@
 use async_trait::async_trait;
+use image::ImageFormat;
 use reqwest::multipart::{Form, Part};
 
 use crate::errors::AppError;
+use crate::image_processor::ProcessedImage;
 use crate::uploaders::UploadService;
 
-pub struct CatboxUploader;
+use super::UploadServiceIdentifier;
 
-impl CatboxUploader {
-    pub fn new() -> Self {
-        CatboxUploader
-    }
-}
+pub struct CatboxUploader;
 
 #[async_trait]
 impl UploadService for CatboxUploader {
     async fn upload(
-        &self,
-        image_data: Vec<u8>,
-        _options: &super::ImageOptions,
+        filename: String,
+        image: ProcessedImage,
+        client_id: String,
+        user_agent: String,
     ) -> Result<String, AppError> {
-        let client = reqwest::Client::new();
+        // the user agent is necessary
+        let client = reqwest::Client::builder().user_agent(user_agent).build()?;
 
         // Create the multipart form
-        let file_part = Part::bytes(image_data)
-            .mime_str("image/png")
-            .map_err(|e| AppError::Upload(e.to_string()))?;
+        let file_part = Part::stream(image.data)
+            .mime_str(image.format.to_mime_type())
+            .map_err(|e| AppError::Upload(e.to_string()))?
+            .file_name(filename);
 
         let form = Form::new()
             .text("reqtype", "fileupload")
+            .text("userhash", client_id)
             .part("fileToUpload", file_part);
 
         // Make the request to Catbox API
@@ -58,5 +60,13 @@ impl UploadService for CatboxUploader {
         }
 
         Ok(url)
+    }
+
+    fn identifier() -> UploadServiceIdentifier {
+        UploadServiceIdentifier::Catbox
+    }
+
+    fn formats() -> Vec<ImageFormat> {
+        vec![ImageFormat::Png, ImageFormat::WebP]
     }
 }

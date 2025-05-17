@@ -1,51 +1,85 @@
 use clap::{Parser, ValueEnum};
 use image::ImageFormat;
+use std::io::{self, BufRead};
+use std::path::PathBuf;
+use std::process;
+
+use crate::errors::AppError;
+use crate::uploaders::UploadServiceIdentifier;
 
 #[derive(Parser)]
 #[command(
-    name = "rich-thumbnail-uploader",
-    about = "Thumbnail uploader for the foo_discord_rich plugin",
+    name = env!("CARGO_PKG_NAME"),
+    about,
     version,
-    author
+    author,
+    override_usage = concat!(env!("CARGO_PKG_NAME"), " [OPTIONS]")
 )]
 pub struct Cli {
-    /// Size to resize the image to (maintains aspect ratio)
+    /// Dimensions to crop the image to
     #[arg(short, long, default_value = "256")]
-    pub size: u32,
+    pub dims: u32,
 
-    /// Image hosting service to use
-    #[arg(short, long, value_enum, default_value_t = ImageService::Imgur)]
-    pub service: ImageService,
+    /// Upload service to use
+    #[arg(short, long, value_enum, default_value_t = UploadServiceIdentifier::Imgur)]
+    pub service: UploadServiceIdentifier,
 
-    /// Output format for the response (URL only or JSON)
+    /// Output format
     #[arg(short, long, value_enum, default_value_t = OutputFormat::Url)]
     pub output: OutputFormat,
+
+    /// Optional uid (overrides provided client id for imgur / sets user hash for catbox)
+    #[arg(short, long)]
+    pub uid: Option<String>,
+
+    /// Preffered image format, only affects catbox
+    #[arg(short, long, value_enum, default_value_t = SupportedImageFormat::Png)]
+    pub format: SupportedImageFormat,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
-pub enum ImageService {
-    Imgur,
-    Catbox,
-}
-
-impl std::fmt::Display for ImageService {
+impl std::fmt::Display for UploadServiceIdentifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ImageService::Imgur => write!(f, "imgur"),
-            ImageService::Catbox => write!(f, "catbox"),
-        }
+        write!(f, "{}", self.to_string())
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
 pub enum OutputFormat {
-    /// Only output the URL
     Url,
 }
 
-pub fn get_image_format(&service: &ImageService) -> ImageFormat {
-    match service {
-        ImageService::Imgur => ImageFormat::Png,
-        ImageService::Catbox => ImageFormat::Png,
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
+pub enum SupportedImageFormat {
+    Png,
+    Webp,
+}
+
+impl SupportedImageFormat {
+    pub fn to_image_format(&self) -> ImageFormat {
+        match self {
+            SupportedImageFormat::Png => ImageFormat::Png,
+            SupportedImageFormat::Webp => ImageFormat::WebP,
+        }
     }
+
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            SupportedImageFormat::Png => "png",
+            SupportedImageFormat::Webp => "webp",
+        }
+    }
+}
+
+pub fn read_filepath() -> Result<PathBuf, AppError> {
+    let stdin = io::stdin();
+    let mut lines = stdin.lock().lines();
+    let filepath = match lines.next() {
+        Some(line) => line?,
+        None => {
+            eprintln!("Error: Expected file path from stdin");
+            process::exit(1);
+        }
+    };
+
+    Ok(PathBuf::new().join(filepath.trim().to_string()))
 }
