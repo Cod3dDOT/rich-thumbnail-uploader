@@ -83,7 +83,7 @@ jobs:
           path: bin
 
       - name: Download test image
-        run: curl -L -o test.png https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/June_odd-eyed-cat.jpg/320px-June_odd-eyed-cat.jpg
+        run: curl -L -o test.png https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png
 
       - name: Compute hash of original image
         id: hash
