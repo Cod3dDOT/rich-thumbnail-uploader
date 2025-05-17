@@ -15,19 +15,12 @@ Inspired by [rust-imgur-upload](https://github.com/s0hv/rust-imgur-upload).
 
 ## Quick Setup
 
-1. Clone and build:
+Clone and build:
 ```bash
 git clone https://github.com/your-username/rich-thumbnail-uploader
 cd rich-thumbnail-uploader
 cargo build --release
 ```
-
-2. (Optional) Set API keys:
-```bash
-export IMGUR_CLIENT_ID=your_imgur_client_id
-export CATBOX_USERHASH=your_catbox_userhash
-```
-
 
 ## Project Structure
 
