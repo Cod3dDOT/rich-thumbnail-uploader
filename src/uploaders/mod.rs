@@ -8,7 +8,7 @@ use image::ImageFormat;
 pub mod catbox;
 pub mod imgur;
 
-#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum, Debug)]
 pub enum UploadServiceIdentifier {
     Imgur,
     Catbox,

@@ -43,12 +43,12 @@ impl std::fmt::Display for UploadServiceIdentifier {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum, Debug)]
 pub enum OutputFormat {
     Url,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum, Debug)]
 pub enum SupportedImageFormat {
     Png,
     Webp,
@@ -82,4 +82,57 @@ pub fn read_filepath() -> Result<PathBuf, AppError> {
     };
 
     Ok(PathBuf::new().join(filepath.trim().to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli_default_values() {
+        let args = vec![env!("CARGO_PKG_NAME")];
+        let cli = Cli::parse_from(args);
+
+        assert_eq!(cli.dims, 256);
+        assert_eq!(cli.service, UploadServiceIdentifier::Imgur);
+        assert_eq!(cli.output, OutputFormat::Url);
+        assert_eq!(cli.format, SupportedImageFormat::Png);
+        assert!(cli.uid.is_none());
+    }
+
+    #[test]
+    fn test_cli_custom_values() {
+        let args = vec![
+            env!("CARGO_PKG_NAME"),
+            "--dims",
+            "512",
+            "--service",
+            "catbox",
+            "--format",
+            "webp",
+            "--uid",
+            "test_user",
+        ];
+        let cli = Cli::parse_from(args);
+
+        assert_eq!(cli.dims, 512);
+        assert_eq!(cli.service, UploadServiceIdentifier::Catbox);
+        assert_eq!(cli.format, SupportedImageFormat::Webp);
+        assert_eq!(cli.uid, Some("test_user".to_string()));
+    }
+
+    #[test]
+    fn test_supported_image_format_conversion() {
+        assert_eq!(
+            SupportedImageFormat::Png.to_image_format(),
+            ImageFormat::Png
+        );
+        assert_eq!(
+            SupportedImageFormat::Webp.to_image_format(),
+            ImageFormat::WebP
+        );
+
+        assert_eq!(SupportedImageFormat::Png.to_string(), "png");
+        assert_eq!(SupportedImageFormat::Webp.to_string(), "webp");
+    }
 }

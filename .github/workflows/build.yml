@@ -23,7 +23,7 @@ jobs:
           script: |
             core.setFailed('IMGUR_CLIENT_ID secret not set!')
 
-  style:
+  style-test:
     name: Check Style
     needs: [check-client-id]
     runs-on: ubuntu-latest
@@ -35,14 +35,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          components: rustfmt
+          components: clippy, rustfmt
 
-      - name: cargo fmt -- --check
+      - name: Run format check
         run: cargo fmt --all -- --check
+
+      - name: Run unit + integration tests
+        run: cargo test --locked --all-targets --all-features
 
   build:
     name: Build binary
-    needs: [style]
+    needs: [style-test]
     runs-on: ubuntu-latest
     strategy:
       matrix:
