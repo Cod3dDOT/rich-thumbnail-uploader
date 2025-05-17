@@ -76,62 +76,107 @@ jobs:
     needs: [build]
     runs-on: windows-latest
     steps:
-      - name: Download built Windows binary
+      - name: Download Windows binary
         uses: actions/download-artifact@v4
         with:
           name: rich-thumbnail-uploader.exe
           path: bin
 
-      - name: Download test image
-        run: curl -L -o example.png https://upload.wikimedia.org/wikipedia/commons/d/d1/Square.png
+      - name: Download 800x800 test image from picsum.photos
+        shell: bash
+        run: |
+          curl -L -o original.jpg https://picsum.photos/800/800
 
-      - name: Compute hash of original image
+      - name: Convert to PNG
+        shell: bash
+        run: magick convert original.jpg test.png
+
+      - name: Compute hash of PNG
         id: hash
         shell: bash
-        run: echo "hash=$(sha256sum example.png | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
+        run: echo "hash=$(sha256sum test.png | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
 
-      - name: Test upload to Imgur
+      - name: Test Imgur upload
         shell: bash
-        env:
-          IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+        continue-on-error: true
+        id: imgur
         run: |
-          echo "Testing Imgur upload..."
-          output=$(echo example.png | ./bin/rich-thumbnail-uploader.exe -d 64 -s imgur -f png)
-          echo "Output: $output"
-          if [[ $? -ne 0 ]]; then
-            echo "Executable exited with non-zero code!"
-            exit 1
-          fi
-          if ! echo "$output" | grep -Eq '^https?://'; then
-            echo "Output did not contain a valid URL!"
-            exit 1
-          fi
+            echo "Starting Imgur upload test..."
 
-      - name: Test Catbox upload (raw, for hash check)
+            output=$(echo test.png | ./bin/rich-thumbnail-uploader.exe -d 256 -s imgur -f png)
+            exit_code=$?
+
+            echo "Output URL: $output"
+
+            if [[ $exit_code -ne 0 ]]; then
+                echo "Imgur uploader exited with non-zero status: $exit_code"
+                exit 1
+            fi
+
+            if ! [[ "$output" =~ ^https?:// ]]; then
+                echo "Output is not a valid URL: $output"
+                exit 1
+            fi
+
+            echo "Imgur upload test passed."
+
+      - name: Test Catbox (raw PNG, hash check)
+        shell: bash
+        id: catbox
+        continue-on-error: true
+        run: |
+            echo "Catbox raw upload test..."
+
+            output=$(echo test.png | ./bin/rich-thumbnail-uploader.exe -s catbox)
+            exit_code=$?
+
+            echo "Output URL: $output"
+
+            if [[ $exit_code -ne 0 ]]; then
+                echo "Program exited with non-zero status: $exit_code"
+                exit 1
+            fi
+
+            # Check if output is a valid URL
+            if ! [[ "$output" =~ ^https?:// ]]; then
+                echo "Output is not a valid URL: $output"
+                exit 1
+            fi
+
+            # Download the uploaded image
+            echo "Downloading uploaded image..."
+            curl -sL -o downloaded.png "$output"
+
+            # Compute hash of downloaded image
+            new_hash=$(sha256sum downloaded.png | cut -d' ' -f1)
+
+            echo "Original hash:    ${{ steps.hash.outputs.hash }}"
+            echo "Downloaded hash:  $new_hash"
+
+            if [[ "$new_hash" != "${{ steps.hash.outputs.hash }}" ]]; then
+                echo "Hash mismatch!"
+                exit 1
+            fi
+
+            echo "Catbox upload test passed. Hashes match."
+
+      - name: Fail if any test failed
         shell: bash
         run: |
-          echo "Testing raw Catbox upload for hash match..."
-          output=$(echo example.png | ./bin/rich-thumbnail-uploader.exe -d 100 -s catbox -f png)
-          echo "Output: $output"
-          if [[ $? -ne 0 ]]; then
-            echo "Executable exited with non-zero code!"
-            exit 1
-          fi
-          if ! echo "$output" | grep -Eq '^https?://'; then
-            echo "Output did not contain a valid URL!"
-            exit 1
-          fi
+            echo "Checking test results..."
+            imgur_exit=${{ steps.imgur.outputs.exit_code }}
+            catbox_exit=${{ steps.catbox.outputs.exit_code }}
 
-          curl -L -o downloaded.png "$output"
-          new_hash=$(sha256sum downloaded.png | cut -d ' ' -f1)
+            echo "Imgur test exit code: $imgur_exit"
+            echo "Catbox test exit code: $catbox_exit"
 
-          echo "Original hash: ${{ steps.hash.outputs.hash }}"
-          echo "Downloaded hash: $new_hash"
+            if [[ "$imgur_exit" != "0" || "$catbox_exit" != "0" ]]; then
+                echo "One or more tests failed."
+                exit 1
+            fi
 
-          if [[ "$new_hash" != "${{ steps.hash.outputs.hash }}" ]]; then
-            echo "Hash mismatch! Uploaded file content changed."
-            exit 1
-          fi
+            echo "All tests passed."
+
 
   create-release:
     name: Publish Release
