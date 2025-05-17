@@ -2,76 +2,164 @@
 name: Build binaries
 
 on:
-    push:
-        tags:
-            - "*"
-    workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  workflow_dispatch:
 
 jobs:
-    check-client-id:
-        name: Check if imgur client id secret exist
-        runs-on: ubuntu-latest
+  check-client-id:
+    name: Check if imgur client id secret exists
+    runs-on: ubuntu-latest
+    env:
+      IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+    steps:
+      - name: A/B Check
+        if: ${{ env.IMGUR_CLIENT_ID == '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('IMGUR_CLIENT_ID secret not set!')
+
+  style:
+    name: Check Style
+    needs: [check-client-id]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      - name: cargo fmt -- --check
+        run: cargo fmt --all -- --check
+
+  build:
+    name: Build binary
+    needs: [style]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-gnu]
+    outputs:
+      target: ${{ steps.set-output.outputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build target (release)
+        id: build
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          target: ${{ matrix.target }}
+          args: "--release --locked"
         env:
-            IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
-        steps:
-            - name: A/B Check
-              if: ${{ env.IMGUR_CLIENT_ID == ''}}
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      core.setFailed('IMGUR_CLIENT_ID secret not set!')
-    style:
-        name: Check Style
-        needs: [check-client-id]
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+          IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
 
-            - name: Install rust
-              uses: dtolnay/rust-toolchain@stable
-              with:
-                  toolchain: stable
-                  components: rustfmt
+      - name: Save target info
+        id: set-output
+        run: echo "target=${{ matrix.target }}" >> $GITHUB_OUTPUT
 
-            - name: cargo fmt -- --check
-              run: cargo fmt --all -- --check
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-binary
+          path: target/${{ matrix.target }}/release/rich-thumbnail-uploader.exe
 
-    create-release:
-        name: Build
-        needs: [style]
-        runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                target: [x86_64-pc-windows-gnu]
-        steps:
-            - uses: actions/checkout@v4
-            - name: Build target
-              uses: houseabsolute/actions-rust-cross@v1
-              with:
-                  target: ${{ matrix.target }}
-                  args: "--release --locked"
-              env:
-                  IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+  test-binary:
+    name: Run integration tests on built binary
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built binary
+        uses: actions/download-artifact@v4
+        with:
+          name: built-binary
+          path: ./bin
 
-            - name: Run UPX to reduce binary size
-              uses: crazy-max/ghaction-upx@v3
-              with:
-                  version: latest
-                  files: "target/${{ matrix.target }}/release/rich-thumbnail-uploader.exe"
-                  args: -q --best --lzma
+      - name: Download test image
+        run: curl -L -o test.png https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/June_odd-eyed-cat.jpg/320px-June_odd-eyed-cat.jpg
 
-            - name: Publish
-              if: github.event_name != 'workflow_dispatch'
-              uses: houseabsolute/actions-rust-release@v0
-              with:
-                  executable-name: rich-thumbnail-uploader.exe
-                  changes-file: CHANGES.md
-                  target: ${{ matrix.target }}
+      - name: Compute hash of original image
+        id: hash
+        run: echo "hash=$(sha256sum test.png | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
 
-            - name: Upload artifact
-              if: github.event_name == 'workflow_dispatch'
-              uses: actions/upload-artifact@v4
-              with:
-                  name: rich-thumbnail-uploader.exe
-                  path: "target/${{ matrix.target }}/release/rich-thumbnail-uploader.exe"
+      - name: Test upload to Imgur
+        env:
+          IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+        run: |
+          chmod +x ./bin/rich-thumbnail-uploader.exe
+          echo "Testing Imgur upload..."
+          output=$(./bin/rich-thumbnail-uploader.exe -d 128 -s imgur -f png test.png)
+          echo "Output: $output"
+          if [[ $? -ne 0 ]]; then
+            echo "Executable exited with non-zero code!"
+            exit 1
+          fi
+          if ! echo "$output" | grep -Eq '^https?://'; then
+            echo "Output did not contain a valid URL!"
+            exit 1
+          fi
+
+      - name: Test upload to Catbox (with hash verification)
+        run: |
+          echo "Testing Catbox upload..."
+          output=$(./bin/rich-thumbnail-uploader.exe -d 128 -s catbox -f png test.png)
+          echo "Output: $output"
+          if [[ $? -ne 0 ]]; then
+            echo "Executable exited with non-zero code!"
+            exit 1
+          fi
+          if ! echo "$output" | grep -Eq '^https?://'; then
+            echo "Output did not contain a valid URL!"
+            exit 1
+          fi
+
+          # Download the uploaded file and compare hashes
+          curl -L -o downloaded.png "$output"
+          new_hash=$(sha256sum downloaded.png | cut -d ' ' -f1)
+
+          echo "Original hash: ${{ steps.hash.outputs.hash }}"
+          echo "Downloaded hash: $new_hash"
+
+          if [[ "$new_hash" != "${{ steps.hash.outputs.hash }}" ]]; then
+            echo "Hash mismatch! Uploaded file content changed."
+            exit 1
+          fi
+
+
+  create-release:
+    name: Publish Release
+    needs: [test-binary]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-gnu]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: built-binary
+          path: ./bin
+
+      - name: Run UPX to reduce binary size
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          version: latest
+          files: "./bin/rich-thumbnail-uploader.exe"
+          args: -q --best --lzma
+
+      - name: Publish GitHub Release
+        uses: houseabsolute/actions-rust-release@v0
+        with:
+          executable-name: rich-thumbnail-uploader.exe
+          changes-file: CHANGES.md
+          target: ${{ matrix.target }}
