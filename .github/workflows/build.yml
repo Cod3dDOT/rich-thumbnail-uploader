@@ -79,7 +79,7 @@ jobs:
       - name: Download built Windows binary
         uses: actions/download-artifact@v4
         with:
-          name: built-binary-x86_64-pc-windows-gnu
+          name: rich-thumbnail-uploader.exe
           path: bin
 
       - name: Download test image
@@ -147,7 +147,7 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v4
         with:
-          name: built-binary
+          name: rich-thumbnail-uploader.exe
           path: ./bin
 
       - name: Run UPX to reduce binary size
