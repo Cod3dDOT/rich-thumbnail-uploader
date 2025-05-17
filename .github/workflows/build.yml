@@ -181,7 +181,7 @@ jobs:
   create-release:
     name: Publish Release
     needs: [test-binary]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -202,9 +202,17 @@ jobs:
           files: "./bin/rich-thumbnail-uploader.exe"
           args: -q --best --lzma
 
-      - name: Publish GitHub Release
-        uses: houseabsolute/actions-rust-release@v0
+      - name: Extract latest changelog entry
+        id: changelog
+        run: |
+            awk '/^## \[/ { if (found) exit; found=1 } found' CHANGES.md > latest_changes.md
+
+      - name: Create GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
         with:
-          executable-name: rich-thumbnail-uploader.exe
-          changes-file: CHANGES.md
-          target: ${{ matrix.target }}
+          files: |
+            bin/rich-thumbnail-uploader.exe
+          body_path: latest_changes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
