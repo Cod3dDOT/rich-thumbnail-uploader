@@ -68,34 +68,34 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: built-binary
+          name: rich-thumbnail-uploader.exe
           path: target/${{ matrix.target }}/release/rich-thumbnail-uploader.exe
 
   test-binary:
-    name: Run integration tests on built binary
+    name: Run integration tests on Windows binary
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-      - name: Download built binary
+      - name: Download built Windows binary
         uses: actions/download-artifact@v4
         with:
-          name: built-binary
-          path: ./bin
+          name: rich-thumbnail-uploader.exe
 
       - name: Download test image
         run: curl -L -o test.png https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/June_odd-eyed-cat.jpg/320px-June_odd-eyed-cat.jpg
 
       - name: Compute hash of original image
         id: hash
+        shell: bash
         run: echo "hash=$(sha256sum test.png | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
 
       - name: Test upload to Imgur
+        shell: bash
         env:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
         run: |
-          chmod +x ./bin/rich-thumbnail-uploader.exe
           echo "Testing Imgur upload..."
-          output=$(./bin/rich-thumbnail-uploader.exe -d 128 -s imgur -f png test.png)
+          output=$(./rich-thumbnail-uploader.exe -d 128 -s imgur -f png test.png)
           echo "Output: $output"
           if [[ $? -ne 0 ]]; then
             echo "Executable exited with non-zero code!"
@@ -106,10 +106,11 @@ jobs:
             exit 1
           fi
 
-      - name: Test upload to Catbox (with hash verification)
+      - name: Test upload to Catbox with hash check
+        shell: bash
         run: |
           echo "Testing Catbox upload..."
-          output=$(./bin/rich-thumbnail-uploader.exe -d 128 -s catbox -f png test.png)
+          output=$(./rich-thumbnail-uploader.exe -d 128 -s catbox -f png test.png)
           echo "Output: $output"
           if [[ $? -ne 0 ]]; then
             echo "Executable exited with non-zero code!"
@@ -120,7 +121,6 @@ jobs:
             exit 1
           fi
 
-          # Download the uploaded file and compare hashes
           curl -L -o downloaded.png "$output"
           new_hash=$(sha256sum downloaded.png | cut -d ' ' -f1)
 
@@ -131,6 +131,7 @@ jobs:
             echo "Hash mismatch! Uploaded file content changed."
             exit 1
           fi
+
 
 
   create-release:
