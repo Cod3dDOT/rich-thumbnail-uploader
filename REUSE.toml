@@ -1,0 +1,20 @@
+version = 1
+SPDX-PackageName = "rich-thumbnail-uploader"
+SPDX-PackageSupplier = "https://github.com/cod3ddot/rich-thumbnail-uploader"
+
+[[annotations]]
+path = [".github/workflows/build.yml"]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 cod3ddot@proton.me"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = [".gitignore", ".gitattributes", "Cargo.lock", "Cargo.toml"]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 cod3ddot@proton.me"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = ["README.md", "CHANGES.md"]
+SPDX-FileCopyrightText = "2025 cod3ddot@proton.me"
+SPDX-License-Identifier = "CC-BY-SA-4.0"

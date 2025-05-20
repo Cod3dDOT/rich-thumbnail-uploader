@@ -1,9 +1,9 @@
 [package]
 name = "rich-thumbnail-uploader"
 description = "Thumbnail uploader for foo_discord_rich"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/cod3ddot/rich-thumbnail-uploader"
 authors = ["cod3ddot <cod3ddot@proton.me>"]
 readme = "README.md"
