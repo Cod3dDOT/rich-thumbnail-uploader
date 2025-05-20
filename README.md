@@ -69,6 +69,11 @@ Options:
 
 This project strives to be [REUSE](https://reuse.software/) compliant.
 
+Generally:
+- Documentation is licensed under CC-BY-NC-SA-4.0
+- Code is licensed under AGPL-3.0-or-later
+- Config files are under CC0-1.0
+
 ```
     rich-thumbnail-uploader: thumbnail uploader for foo_discord_rich
     Copyright (C) 2025  cod3ddot@proton.me
