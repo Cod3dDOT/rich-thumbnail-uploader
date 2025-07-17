@@ -26,7 +26,7 @@ fn parse_args(args: &[&str]) -> Result<Config, AppError> {
 fn test_end_to_end_image_processing() -> Result<(), Box<dyn std::error::Error>> {
     let (temp_dir, file_path) = create_test_image(200, 200);
 
-    let args = ["--dims", "200", "--format", "png", "--service", "catbox"];
+    let args = ["-d", "200", "-f", "png", "-s", "catbox"];
     let config = parse_args(&args)?;
 
     let options = ImageProcessingOptions {
@@ -48,11 +48,11 @@ fn test_end_to_end_image_processing() -> Result<(), Box<dyn std::error::Error>> 
 #[test]
 fn test_config_validation() {
     // Valid config for catbox
-    let args = ["--service", "catbox", "--format", "png"];
+    let args = ["-s", "catbox", "-f", "png"];
     assert!(parse_args(&args).is_ok());
 
     // Invalid format for imgur
-    let args = ["--service", "imgur", "--format", "webp", "--uid", "test_id"];
+    let args = ["-s", "imgur", "-f", "webp", "--uid", "test_id"];
     assert!(parse_args(&args).is_err());
 }
 
