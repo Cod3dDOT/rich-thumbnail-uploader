@@ -14,17 +14,17 @@ publish = false
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-async-trait = { version = "0.1.88" }
-serde = { version = "1.0.219", default-features = false, features = ["derive"] }
-image = { version = "0.25" }
-tokio = { version = "1.44.2", default-features = false, features = [
-    "rt-multi-thread",
-    "macros",
-] }
-reqwest = { version = "0.12.15", default-features = false, features = [
-    "multipart",
-    "default-tls",
+reqwest = { version = "0.12.22", default-features = false, features = [
     "json",
+    "blocking",
+    "multipart",
+    "native-tls",
+] }
+miniserde = { version = "0.1.42" }
+image = { version = "0.25.6", default-features = false, features = [
+    "jpeg",
+    "png",
+    "webp",
 ] }
 thiserror = "2.0.12"
 clap = { version = "4.5.35", default-features = false, features = [

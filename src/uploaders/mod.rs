@@ -7,7 +7,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{errors::AppError, image_processor::ProcessedImage};
-use async_trait::async_trait;
 use clap::ValueEnum;
 use image::ImageFormat;
 
@@ -21,10 +20,10 @@ pub enum UploadServiceIdentifier {
 }
 
 impl UploadServiceIdentifier {
-    pub fn to_string(&self) -> String {
+    pub fn as_str(&self) -> &'static str {
         match self {
-            UploadServiceIdentifier::Imgur => "imgur".to_string(),
-            UploadServiceIdentifier::Catbox => "catbox".to_string(),
+            UploadServiceIdentifier::Imgur => "imgur",
+            UploadServiceIdentifier::Catbox => "catbox",
         }
     }
 
@@ -36,9 +35,9 @@ impl UploadServiceIdentifier {
     }
 }
 
-pub async fn upload(
+pub fn upload(
     service: UploadServiceIdentifier,
-    image: ProcessedImage,
+    image: &ProcessedImage,
     client_id: String,
     user_agent: String,
 ) -> Result<String, AppError> {
@@ -53,24 +52,21 @@ pub async fn upload(
     );
     match service {
         UploadServiceIdentifier::Imgur => {
-            imgur::ImgurUploader::upload(filename, image, client_id, user_agent).await
+            imgur::ImgurUploader::upload(filename, image, client_id, user_agent)
         }
         UploadServiceIdentifier::Catbox => {
-            catbox::CatboxUploader::upload(filename, image, client_id, user_agent).await
+            catbox::CatboxUploader::upload(filename, image, client_id, user_agent)
         }
     }
 }
 
-#[async_trait]
 pub trait UploadService {
-    async fn upload(
+    fn upload(
         filename: String,
-        image: ProcessedImage,
+        image: &ProcessedImage,
         client_id: String,
         user_agent: String,
     ) -> Result<String, AppError>;
-
-    fn identifier() -> UploadServiceIdentifier;
 
     fn formats() -> Vec<ImageFormat>;
 }

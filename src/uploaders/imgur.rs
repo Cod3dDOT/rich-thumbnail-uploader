@@ -4,59 +4,53 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use async_trait::async_trait;
+use std::io::Cursor;
+
 use image::ImageFormat;
-use reqwest::multipart::{Form, Part};
+use miniserde::json;
+use reqwest::blocking::{
+    multipart::{Form, Part},
+    Client,
+};
 
 use crate::errors::AppError;
 use crate::image_processor::ProcessedImage;
 use crate::models::imgur::ImgurResponse;
 use crate::uploaders::UploadService;
 
-use super::UploadServiceIdentifier;
-
 pub struct ImgurUploader;
 
-#[async_trait]
 impl UploadService for ImgurUploader {
-    async fn upload(
+    fn upload(
         filename: String,
-        image: ProcessedImage,
+        image: &ProcessedImage,
         client_id: String,
         user_agent: String,
     ) -> Result<String, AppError> {
-        let client = reqwest::Client::builder().user_agent(user_agent).build()?;
+        let client = Client::builder().user_agent(user_agent).build()?;
 
-        // Create the multipart form
-        let part = Part::stream(image.data)
+        let part = Part::reader(Cursor::new(image.data.clone()))
             .mime_str(image.format.to_mime_type())
             .map_err(|e| AppError::Upload(e.to_string()))?
             .file_name(filename);
 
         let form = Form::new().part("image", part);
 
-        // Make the request to Imgur API
         let response = client
             .post("https://api.imgur.com/3/image")
-            .header("Authorization", format!("Client-ID {}", client_id))
+            .header("Authorization", &format!("Client-ID {}", client_id))
             .multipart(form)
-            .send()
-            .await?;
+            .send()?;
 
-        // Check if the request was successful
         if !response.status().is_success() {
-            let error_text = response
+            let err = response
                 .text()
-                .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-
-            return Err(AppError::Upload(format!("Imgur API error: {}", error_text)));
+            return Err(AppError::Upload(format!("Imgur API error: {}", err)));
         }
 
-        // Parse the JSON response
-        let imgur_response = response.json::<ImgurResponse>().await?;
+        let imgur_response: ImgurResponse = json::from_str(&response.text()?).unwrap();
 
-        // Check if the upload was successful
         if !imgur_response.success {
             return Err(AppError::Upload(
                 "Imgur reported upload failure".to_string(),
@@ -64,10 +58,6 @@ impl UploadService for ImgurUploader {
         }
 
         Ok(imgur_response.data.link)
-    }
-
-    fn identifier() -> UploadServiceIdentifier {
-        UploadServiceIdentifier::Imgur
     }
 
     fn formats() -> Vec<ImageFormat> {

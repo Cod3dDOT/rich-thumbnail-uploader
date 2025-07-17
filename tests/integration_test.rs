@@ -56,7 +56,7 @@ fn test_end_to_end_image_processing() {
         format: config.image_format.to_image_format(),
     };
 
-    let result = create_thumbnail(file_path.to_str().unwrap(), &options).unwrap();
+    let result = create_thumbnail(&file_path, &options).unwrap();
 
     // Verify the result
     let processed_img = image::load_from_memory(&result.data).unwrap();

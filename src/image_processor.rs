@@ -4,25 +4,26 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use crate::errors::AppError;
-use image::{self, ImageFormat};
 use std::io::Cursor;
+
+use image::ImageFormat;
+
+use crate::errors::AppError;
 
 pub struct ImageProcessingOptions {
     pub size: u32,
     pub format: ImageFormat,
 }
-
 pub struct ProcessedImage {
     pub data: Vec<u8>,
     pub format: ImageFormat,
 }
 
 pub fn create_thumbnail(
-    filepath: &str,
+    filepath: &std::path::Path,
     options: &ImageProcessingOptions,
 ) -> Result<ProcessedImage, AppError> {
-    // Open the image
+    // Decode the source image
     let img = image::open(filepath)?;
 
     // Create thumbnail
@@ -30,9 +31,7 @@ pub fn create_thumbnail(
 
     // Convert to specified format
     let mut buf = Cursor::new(Vec::new());
-    thumbnail
-        .write_to(&mut buf, options.format)
-        .map_err(|e| AppError::Image(e))?;
+    thumbnail.write_to(&mut buf, options.format)?;
 
     Ok(ProcessedImage {
         data: buf.into_inner(),
@@ -43,7 +42,7 @@ pub fn create_thumbnail(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GenericImageView, ImageBuffer, Rgb};
+    use image::{GenericImageView, ImageBuffer, ImageFormat, Rgb};
     use tempfile::TempDir;
 
     fn create_test_image(width: u32, height: u32) -> (TempDir, String) {
@@ -71,7 +70,7 @@ mod tests {
             format: ImageFormat::Png,
         };
 
-        let result = create_thumbnail(&file_path, &options).unwrap();
+        let result = create_thumbnail(std::path::Path::new(&file_path), &options).unwrap();
 
         // Load the resulting image to verify dimensions
         let img = image::load_from_memory(&result.data).unwrap();
@@ -86,14 +85,14 @@ mod tests {
 
         let options = ImageProcessingOptions {
             size: 100,
-            format: ImageFormat::Jpeg,
+            format: ImageFormat::WebP,
         };
 
-        let result = create_thumbnail(&file_path, &options).unwrap();
-        assert_eq!(result.format, ImageFormat::Jpeg);
+        let result = create_thumbnail(std::path::Path::new(&file_path), &options).unwrap();
+        assert_eq!(result.format, ImageFormat::WebP);
 
-        // Verify the data is actually JPEG
-        assert!(image::guess_format(&result.data).unwrap() == ImageFormat::Jpeg);
+        // Verify the data is actually WebP
+        assert!(image::guess_format(&result.data).unwrap() == ImageFormat::WebP);
 
         drop(temp_dir); // Cleanup
     }
@@ -105,7 +104,7 @@ mod tests {
             format: ImageFormat::Png,
         };
 
-        let result = create_thumbnail("nonexistent_file.png", &options);
+        let result = create_thumbnail(std::path::Path::new("nonexistent_file.png"), &options);
         assert!(result.is_err());
     }
 }

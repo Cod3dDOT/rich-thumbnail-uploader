@@ -18,7 +18,7 @@ pub enum AppError {
     Upload(String),
 
     #[error("File not found: {0}")]
-    FileNotFound(String),
+    FileNotFound(std::path::PathBuf),
 
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),

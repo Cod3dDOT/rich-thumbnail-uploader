@@ -27,13 +27,11 @@ impl Config {
         let imgur_client_id_env = option_env!("IMGUR_CLIENT_ID");
 
         // use provided id if set, else use environment variable
-        let user_id: Option<String> = options.uid.clone();
-
         let client_id = match options.service {
             UploadServiceIdentifier::Imgur => {
-                user_id.clone().or(imgur_client_id_env.map(str::to_string))
+                options.uid.clone().or(imgur_client_id_env.map(str::to_string))
             }
-            UploadServiceIdentifier::Catbox => user_id,
+            UploadServiceIdentifier::Catbox => options.uid.clone(),
         };
 
         let config = Config {
@@ -56,7 +54,7 @@ impl Config {
         if !client_id_check {
             return Err(AppError::Config(format!(
                 "{} requires a client id",
-                config.service
+                config.service.as_str()
             )));
         }
 
@@ -69,7 +67,7 @@ impl Config {
             return Err(AppError::Config(format!(
                 "{} is not a valid format for {}",
                 config.image_format.to_string(),
-                config.service
+                config.service.as_str()
             )));
         }
 
