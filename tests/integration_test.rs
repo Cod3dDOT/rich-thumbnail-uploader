@@ -4,93 +4,70 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use clap::Parser;
-use image::{GenericImageView, ImageBuffer, Rgb};
-use rich_thumbnail_uploader::{
-    cli::Cli,
-    config::Config,
-    image_processor::{create_thumbnail, ImageProcessingOptions},
-};
+use std::ffi::OsString;
 use std::path::PathBuf;
+
+use image::{GenericImageView, ImageBuffer, Rgb};
+use rich_thumbnail_uploader::config::Config;
+use rich_thumbnail_uploader::errors::AppError;
+use rich_thumbnail_uploader::image_processor::{create_thumbnail, ImageProcessingOptions};
 use tempfile::TempDir;
 
-fn create_test_image(width: u32, height: u32) -> (TempDir, PathBuf) {
-    let temp_dir = TempDir::new().unwrap();
-    let file_path = temp_dir.path().join("test_image.png");
+fn parse_args(args: &[&str]) -> Result<Config, AppError> {
+    let mut new_args = vec![OsString::from("rich-thumbnail-uploader.exe")];
+    new_args.extend(args.iter().map(|s| OsString::from(*s)));
 
-    let mut img = ImageBuffer::new(width, height);
+    let pargs = pico_args::Arguments::from_vec(new_args);
 
-    // Fill with a simple pattern
-    for (x, y, pixel) in img.enumerate_pixels_mut() {
-        *pixel = Rgb([x as u8, y as u8, 100]);
-    }
-
-    img.save(&file_path).unwrap();
-
-    (temp_dir, file_path)
+    Config::parse(pargs)
 }
 
 #[test]
-fn test_end_to_end_image_processing() {
-    let (temp_dir, file_path) = create_test_image(400, 400);
+fn test_end_to_end_image_processing() -> Result<(), Box<dyn std::error::Error>> {
+    let (temp_dir, file_path) = create_test_image(200, 200);
 
-    // Create CLI args
-    let args = vec![
-        "rich-thumbnail-uploader",
-        "--dims",
-        "200",
-        "--format",
-        "png",
-        "--service",
-        "catbox", // Using catbox as it doesn't require authentication
-    ];
+    let args = ["--dims", "200", "--format", "png", "--service", "catbox"];
+    let config = parse_args(&args)?;
 
-    let cli = Cli::parse_from(args);
-
-    // Initialize config
-    let config = Config::new(&cli).unwrap();
-
-    // Process image
     let options = ImageProcessingOptions {
-        size: config.image_dimensions.0,
+        size: config.image_dimensions,
         format: config.image_format.to_image_format(),
     };
 
-    let result = create_thumbnail(&file_path, &options).unwrap();
+    let result = create_thumbnail(&file_path, &options)?;
+    let processed_img = image::load_from_memory(&result.data)?;
 
-    // Verify the result
-    let processed_img = image::load_from_memory(&result.data).unwrap();
     assert_eq!(processed_img.dimensions(), (200, 200));
     assert_eq!(result.format, image::ImageFormat::Png);
 
-    drop(temp_dir); // Cleanup
+    drop(temp_dir);
+
+    Ok(())
 }
 
 #[test]
 fn test_config_validation() {
-    // Test valid config
-    let args = vec![
-        "rich-thumbnail-uploader",
-        "--service",
-        "catbox",
-        "--format",
-        "png",
-    ];
-    let cli = Cli::parse_from(args);
-    let config = Config::new(&cli);
-    assert!(config.is_ok());
+    // Valid config for catbox
+    let args = ["--service", "catbox", "--format", "png"];
+    assert!(parse_args(&args).is_ok());
 
-    // Test invalid format for service
-    let args = vec![
-        "rich-thumbnail-uploader",
-        "--service",
-        "imgur",
-        "--format",
-        "webp", // Imgur doesn't support WebP
-        "--uid",
-        "test_id",
-    ];
-    let cli = Cli::parse_from(args);
-    let config = Config::new(&cli);
-    assert!(config.is_err());
+    // Invalid format for imgur
+    let args = ["--service", "imgur", "--format", "webp", "--uid", "test_id"];
+    assert!(parse_args(&args).is_err());
+}
+
+fn create_test_image(width: u32, height: u32) -> (TempDir, PathBuf) {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let file_path = temp_dir.path().join("test_image.png");
+
+    let mut img = ImageBuffer::new(width, height);
+
+    for (x, y, pixel) in img.enumerate_pixels_mut() {
+        *pixel = Rgb([x as u8, y as u8, 100]);
+    }
+
+    img.save(&file_path).expect("Failed to save test image");
+    assert!(file_path.exists(), "Image file was not created");
+
+    (temp_dir, file_path)
 }

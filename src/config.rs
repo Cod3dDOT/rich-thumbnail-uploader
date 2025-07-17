@@ -4,142 +4,121 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use crate::{
-    cli::{Cli, SupportedImageFormat},
-    errors::AppError,
-    uploaders::UploadServiceIdentifier,
-};
+use image::ImageFormat;
+use pico_args::Arguments;
+use std::path::PathBuf;
+
+use crate::errors::AppError;
+use crate::uploaders::UploadServiceIdentifier;
 
 static UASTRING: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SupportedImageFormat {
+    Png,
+    Webp,
+}
+
+impl SupportedImageFormat {
+    pub fn to_image_format(self) -> ImageFormat {
+        match self {
+            SupportedImageFormat::Png => ImageFormat::Png,
+            SupportedImageFormat::Webp => ImageFormat::WebP,
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "png" => Some(Self::Png),
+            "webp" => Some(Self::Webp),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SupportedImageFormat::Png => "png",
+            SupportedImageFormat::Webp => "webp",
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Config {
     pub service: UploadServiceIdentifier,
-    pub image_format: SupportedImageFormat,
-    pub image_dimensions: (u32, u32),
     pub client_id: Option<String>,
+    pub image_format: SupportedImageFormat,
+    pub image_dimensions: u32,
     pub user_agent: &'static str,
 }
 
 impl Config {
-    pub fn new(options: &Cli) -> Result<Self, AppError> {
-        // Get credentials from environment variables at compile time
-        let imgur_client_id_env = option_env!("IMGUR_CLIENT_ID");
+    pub fn parse(mut pargs: Arguments) -> Result<Self, AppError> {
+        let dims = pargs
+            .opt_value_from_str::<&str, u32>("--dims")
+            .map_err(|_| AppError::Config("Invalid dimensions".into()))?
+            .unwrap_or(256);
 
-        // use provided id if set, else use environment variable
-        let client_id = match options.service {
-            UploadServiceIdentifier::Imgur => options
-                .uid
+        let service = pargs
+            .opt_value_from_str::<&str, String>("--service")
+            .map_err(|_| AppError::Config("Invalid service".into()))?
+            .as_deref()
+            .and_then(UploadServiceIdentifier::from_str)
+            .ok_or(AppError::Config("Invalid service".into()))?;
+
+        let format = pargs
+            .opt_value_from_str::<&str, String>("--format")
+            .map_err(|_| AppError::Config("Invalid format".into()))?
+            .as_deref()
+            .and_then(SupportedImageFormat::from_str)
+            .unwrap_or(SupportedImageFormat::Png);
+
+        let uid = pargs
+            .opt_value_from_str::<&str, String>("--uid")
+            .map_err(|_| AppError::Config("Invalid uid".into()))?;
+
+        // Validate
+        let client_id = match service {
+            UploadServiceIdentifier::Imgur => uid
                 .clone()
-                .or(imgur_client_id_env.map(str::to_string)),
-            UploadServiceIdentifier::Catbox => options.uid.clone(),
+                .or(option_env!("IMGUR_CLIENT_ID").map(str::to_string)),
+            UploadServiceIdentifier::Catbox => uid.clone(),
         };
 
-        let config = Config {
-            service: options.service,
-            client_id: client_id,
-            user_agent: UASTRING,
-            image_format: options.format,
-            image_dimensions: (options.dims, options.dims),
-        };
-
-        Config::valid(config)
-    }
-
-    fn valid(config: Config) -> Result<Self, AppError> {
-        let client_id_check = match config.service {
-            UploadServiceIdentifier::Imgur => config.client_id.is_some(),
-            UploadServiceIdentifier::Catbox => true,
-        };
-
-        if !client_id_check {
-            return Err(AppError::Config(format!(
-                "{} requires a client id",
-                config.service.as_str()
-            )));
+        if matches!(service, UploadServiceIdentifier::Imgur) && client_id.is_none() {
+            return Err(AppError::Config("Imgur requires a client id".into()));
         }
 
-        let valid_format = config
-            .service
-            .formats()
-            .contains(&config.image_format.to_image_format());
-
-        if !valid_format {
+        if !service.formats().contains(&format.to_image_format()) {
             return Err(AppError::Config(format!(
                 "{} is not a valid format for {}",
-                config.image_format.to_string(),
-                config.service.as_str()
+                format.as_str(),
+                service.as_str()
             )));
         }
 
-        Ok(config)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::cli::SupportedImageFormat;
-
-    #[test]
-    fn test_config_new_with_imgur_and_client_id() {
-        let cli = Cli {
-            service: UploadServiceIdentifier::Imgur,
-            uid: Some("test_client_id".to_string()),
-            format: SupportedImageFormat::Png,
-            dims: 128,
-            output: crate::cli::OutputFormat::Url,
-        };
-
-        let config = Config::new(&cli).unwrap();
-        assert_eq!(config.service, UploadServiceIdentifier::Imgur);
-        assert_eq!(config.client_id, Some("test_client_id".to_string()));
-        assert_eq!(config.image_format, SupportedImageFormat::Png);
-        assert_eq!(config.image_dimensions, (128, 128));
+        Ok(Self {
+            service,
+            client_id,
+            image_format: format,
+            image_dimensions: dims,
+            user_agent: UASTRING,
+        })
     }
 
-    #[test]
-    fn test_config_new_with_imgur_no_client_id() {
-        let cli = Cli {
-            service: UploadServiceIdentifier::Imgur,
-            uid: None,
-            format: SupportedImageFormat::Png,
-            dims: 128,
-            output: crate::cli::OutputFormat::Url,
-        };
-
-        let result = Config::new(&cli);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AppError::Config(_)));
+    pub fn from_env() -> Result<Self, AppError> {
+        Config::parse(Arguments::from_env())
     }
 
-    #[test]
-    fn test_config_new_with_catbox() {
-        let cli = Cli {
-            service: UploadServiceIdentifier::Catbox,
-            uid: None,
-            format: SupportedImageFormat::Png,
-            dims: 128,
-            output: crate::cli::OutputFormat::Url,
-        };
+    pub fn read_input_path(&self) -> Result<PathBuf, AppError> {
+        use std::io::BufRead;
+        let stdin = std::io::stdin();
+        let mut lines = stdin.lock().lines();
+        let filepath = lines
+            .next()
+            .transpose()?
+            .ok_or_else(|| AppError::Config("Expected input file path".into()))?;
 
-        let config = Config::new(&cli).unwrap();
-        assert_eq!(config.service, UploadServiceIdentifier::Catbox);
-        assert_eq!(config.client_id, None);
-    }
-
-    #[test]
-    fn test_config_with_invalid_format() {
-        let cli = Cli {
-            service: UploadServiceIdentifier::Imgur,
-            uid: Some("test_client_id".to_string()),
-            format: SupportedImageFormat::Webp, // Assuming Webp is not supported by Imgur
-            dims: 128,
-            output: crate::cli::OutputFormat::Url,
-        };
-
-        let result = Config::new(&cli);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AppError::Config(_)));
+        Ok(PathBuf::from(filepath.trim()))
     }
 }

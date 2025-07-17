@@ -7,13 +7,12 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{errors::AppError, image_processor::ProcessedImage};
-use clap::ValueEnum;
 use image::ImageFormat;
 
 pub mod catbox;
 pub mod imgur;
 
-#[derive(Copy, Clone, PartialEq, Eq, ValueEnum, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum UploadServiceIdentifier {
     Imgur,
     Catbox,
@@ -31,6 +30,14 @@ impl UploadServiceIdentifier {
         match self {
             UploadServiceIdentifier::Imgur => imgur::ImgurUploader::formats(),
             UploadServiceIdentifier::Catbox => catbox::CatboxUploader::formats(),
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "imgur" => Some(Self::Imgur),
+            "catbox" => Some(Self::Catbox),
+            _ => None,
         }
     }
 }
