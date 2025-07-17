@@ -28,9 +28,10 @@ impl Config {
 
         // use provided id if set, else use environment variable
         let client_id = match options.service {
-            UploadServiceIdentifier::Imgur => {
-                options.uid.clone().or(imgur_client_id_env.map(str::to_string))
-            }
+            UploadServiceIdentifier::Imgur => options
+                .uid
+                .clone()
+                .or(imgur_client_id_env.map(str::to_string)),
             UploadServiceIdentifier::Catbox => options.uid.clone(),
         };
 
