@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Now licensed under AGPL
-- Packaged executable size reduced to under 600kb
+- Packaged executable size reduced to under 600kb by using native-tls and rewriting options with pico-args
 
 ## [0.2.0] - 2025-05-16
 

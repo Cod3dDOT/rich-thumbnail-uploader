@@ -7,11 +7,22 @@
 use image::ImageFormat;
 use pico_args::Arguments;
 use std::path::PathBuf;
+use std::process::exit;
 
 use crate::errors::AppError;
 use crate::uploaders::UploadServiceIdentifier;
 
 static UASTRING: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+
+const HELP: &str = "\
+Options:
+    -d <DIMS>       Dimensions to resize the image to (maintains aspect ratio) [default: 256]
+    -s <SERVICE>    Image hosting service to use [default: imgur] [possible values: imgur, catbox]
+    -f <FORMAT>     Preffered image format [default: png] [possible values: png, webp]
+    --uid <UID>     Optional uid (overrides provided client id for imgur / sets user hash for catbox)
+    -h, --help      Print help
+    -V, --version   Print version
+";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SupportedImageFormat {
@@ -54,20 +65,30 @@ pub struct Config {
 
 impl Config {
     pub fn parse(mut pargs: Arguments) -> Result<Self, AppError> {
+        if pargs.contains(["-V", "--version"]) {
+            println!("{}", UASTRING);
+            exit(0);
+        }
+
+        if pargs.contains(["-h", "--help"]) {
+            println!("{}", HELP);
+            exit(0);
+        }
+
         let dims = pargs
-            .opt_value_from_str::<&str, u32>("--dims")
+            .opt_value_from_str::<&str, u32>("-d")
             .map_err(|_| AppError::Config("Invalid dimensions".into()))?
             .unwrap_or(256);
 
         let service = pargs
-            .opt_value_from_str::<&str, String>("--service")
+            .opt_value_from_str::<&str, String>("-s")
             .map_err(|_| AppError::Config("Invalid service".into()))?
             .as_deref()
             .and_then(UploadServiceIdentifier::from_str)
             .ok_or(AppError::Config("Invalid service".into()))?;
 
         let format = pargs
-            .opt_value_from_str::<&str, String>("--format")
+            .opt_value_from_str::<&str, String>("-f")
             .map_err(|_| AppError::Config("Invalid format".into()))?
             .as_deref()
             .and_then(SupportedImageFormat::from_str)
