@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 2025-05-20
 
+### Changed
 - Now licensed under AGPL
+- Packaged executable size reduced to under 600kb
 
 ## [0.2.0] - 2025-05-16
 
 ### Added
 -   Support for catbox.moe
--   Specifying format (png/webp)
+-   Support for specifying upload format (png/webp)
 
 ### Changed
 -   Updated deps
