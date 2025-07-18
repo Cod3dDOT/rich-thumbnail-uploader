@@ -15,7 +15,6 @@ maintenance = { status = "passively-maintained" }
 
 [dependencies]
 reqwest = { version = "0.12.22", default-features = false, features = [
-    "json",
     "blocking",
     "multipart",
     "native-tls",
