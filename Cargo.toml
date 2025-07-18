@@ -38,3 +38,4 @@ strip = true      # Strip symbols from binary
 
 [dev-dependencies]
 tempfile = "3.10.1"
+image_hasher = "3.0.0"

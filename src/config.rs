@@ -27,21 +27,21 @@ Options:
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SupportedImageFormat {
     Png,
-    Webp,
+    WebP,
 }
 
 impl SupportedImageFormat {
     pub fn to_image_format(self) -> ImageFormat {
         match self {
             SupportedImageFormat::Png => ImageFormat::Png,
-            SupportedImageFormat::Webp => ImageFormat::WebP,
+            SupportedImageFormat::WebP => ImageFormat::WebP,
         }
     }
 
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "png" => Some(Self::Png),
-            "webp" => Some(Self::Webp),
+            "webp" => Some(Self::WebP),
             _ => None,
         }
     }
@@ -49,7 +49,7 @@ impl SupportedImageFormat {
     pub fn as_str(&self) -> &'static str {
         match self {
             SupportedImageFormat::Png => "png",
-            SupportedImageFormat::Webp => "webp",
+            SupportedImageFormat::WebP => "webp",
         }
     }
 }

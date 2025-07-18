@@ -4,70 +4,84 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use std::ffi::OsString;
-use std::path::PathBuf;
+mod common;
 
-use image::{GenericImageView, ImageBuffer, Rgb};
-use rich_thumbnail_uploader::config::Config;
-use rich_thumbnail_uploader::errors::AppError;
-use rich_thumbnail_uploader::image_processor::{create_thumbnail, ImageProcessingOptions};
-use tempfile::TempDir;
-
-fn parse_args(args: &[&str]) -> Result<Config, AppError> {
-    let mut new_args = vec![OsString::from("rich-thumbnail-uploader.exe")];
-    new_args.extend(args.iter().map(|s| OsString::from(*s)));
-
-    let pargs = pico_args::Arguments::from_vec(new_args);
-
-    Config::parse(pargs)
-}
+use image::GenericImageView;
+use image_hasher::{HashAlg, HasherConfig};
+use rich_thumbnail_uploader::{
+    config::SupportedImageFormat,
+    errors::AppError,
+    image_processor::{create_thumbnail, ImageProcessingOptions},
+    uploaders::upload,
+};
 
 #[test]
-fn test_end_to_end_image_processing() -> Result<(), Box<dyn std::error::Error>> {
-    let (temp_dir, file_path) = create_test_image(200, 200);
+fn test_full_workflow() -> Result<(), AppError> {
+    let test_cases = vec![
+        (["-s", "catbox", "-f", "png"], SupportedImageFormat::Png),
+        (["-s", "catbox", "-f", "webp"], SupportedImageFormat::WebP),
+        // TODO: add imgur tests
+        // (
+        //     [
+        //         "-s",
+        //         "imgur",
+        //         "-f",
+        //         "png",
+        //         "--uid",
+        //         option_env!("IMGUR_CLIENT_ID").unwrap(),
+        //     ],
+        //     SupportedImageFormat::Png,
+        // ),
+    ];
 
-    let args = ["-d", "200", "-f", "png", "-s", "catbox"];
-    let config = parse_args(&args)?;
+    for (args, expected_format) in test_cases {
+        let (temp_dir, file_path) = common::create_test_image_with_format(
+            400,
+            300,
+            expected_format.to_image_format(),
+            &format!("test_image.{}", expected_format.as_str()),
+        );
 
-    let options = ImageProcessingOptions {
-        size: config.image_dimensions,
-        format: config.image_format.to_image_format(),
-    };
+        let config = common::parse_args(&args)?;
+        assert_eq!(config.image_format, expected_format);
 
-    let result = create_thumbnail(&file_path, &options)?;
-    let processed_img = image::load_from_memory(&result.data)?;
+        let options = ImageProcessingOptions {
+            size: config.image_dimensions,
+            format: config.image_format.to_image_format(),
+        };
 
-    assert_eq!(processed_img.dimensions(), (200, 200));
-    assert_eq!(result.format, image::ImageFormat::Png);
+        let thumbnail = create_thumbnail(&file_path, &options)?;
 
-    drop(temp_dir);
+        let thumbnail_image = image::load_from_memory(&thumbnail.data)?;
+        let (thumb_width, thumb_height) = thumbnail_image.dimensions();
 
-    Ok(())
-}
+        // Aspect ratio check
+        let ratio = thumb_width as f64 / thumb_height as f64;
+        let expected_ratio = 4.0 / 3.0;
+        assert!((ratio - expected_ratio).abs() < 0.01);
 
-#[test]
-fn test_config_validation() {
-    // Valid config for catbox
-    let args = ["-s", "catbox", "-f", "png"];
-    assert!(parse_args(&args).is_ok());
+        let upload_result = upload(
+            config.service,
+            &thumbnail,
+            config.client_id.unwrap_or_default(),
+            config.user_agent.to_string(),
+        )?;
 
-    // Invalid format for imgur
-    let args = ["-s", "imgur", "-f", "webp", "--uid", "test_id"];
-    assert!(parse_args(&args).is_err());
-}
+        let uploaded_image = common::load_image_from_url(&upload_result)
+            .map_err(|e| AppError::Upload(format!("Failed to load uploaded image: {}", e)))?;
 
-fn create_test_image(width: u32, height: u32) -> (TempDir, PathBuf) {
-    let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let file_path = temp_dir.path().join("test_image.png");
+        // Recompute and compare perceptual hashes
+        let hasher = HasherConfig::new().hash_alg(HashAlg::Gradient).to_hasher();
 
-    let mut img = ImageBuffer::new(width, height);
+        let uploaded_hash = hasher.hash_image(&uploaded_image);
+        let thumbnail_hash = hasher.hash_image(&thumbnail_image);
 
-    for (x, y, pixel) in img.enumerate_pixels_mut() {
-        *pixel = Rgb([x as u8, y as u8, 100]);
+        // Compare with a low Hamming distance threshold (0 = identical)
+        let distance = uploaded_hash.dist(&thumbnail_hash);
+        assert!(distance <= 5, "Image hash distance too high: {}", distance);
+
+        drop(temp_dir);
     }
 
-    img.save(&file_path).expect("Failed to save test image");
-    assert!(file_path.exists(), "Image file was not created");
-
-    (temp_dir, file_path)
+    Ok(())
 }

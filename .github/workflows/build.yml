@@ -23,7 +23,7 @@ jobs:
           script: |
             core.setFailed('IMGUR_CLIENT_ID secret not set!')
 
-  style-test:
+  check-style:
     name: Check Style
     needs: [check-client-id]
     runs-on: ubuntu-latest
@@ -43,9 +43,12 @@ jobs:
       - name: Run unit + integration tests
         run: cargo test --locked --all-targets --all-features
 
+      - name: Check REUSE compliance
+        uses: fsfe/reuse-action@v5
+
   build:
     name: Build binary
-    needs: [style-test]
+    needs: [check-style]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -179,7 +182,6 @@ jobs:
             fi
 
             echo "All tests passed."
-
 
   create-release:
     name: Publish Release
