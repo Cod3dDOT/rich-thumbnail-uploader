@@ -126,8 +126,9 @@ jobs:
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         run: |
-          echo "${{ secrets.GPG_SIGNING_KEY }}" | gpg --batch --allow-secret-key-import --import
-          gpg --list-secret-keys --with-colons
+          echo "${{ secrets.GPG_SIGNING_KEY }}"
+           | base64 --decode --ignore-garbage \
+           | gpg --batch --allow-secret-key-import --import
 
       - name: Sign the checksum file
         if: ${{ env.GPG_SIGNING_KEY != '' && env.GPG_PASSPHRASE != '' && env.GPG_KEY_ID != '' }}
