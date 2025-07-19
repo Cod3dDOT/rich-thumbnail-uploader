@@ -1,11 +1,13 @@
 [![Rich Thumbnail Uploader](https://cod3d.dev/img/readme-rich_thumbnail_uploader.gif)](https://github.com/cod3ddot/rich-thumbnail-uploader)
 
-<a href="https://www.gnu.org/licenses/agpl-3.0" target="_blank" rel="noopener noreferrer" style="display:inline">
-  <img src="https://www.gnu.org/graphics/agplv3-155x51.png" alt="License: AGPL v3" height="28" style="vertical-align:middle;"/>
+<p align="center">
+<a href="https://www.gnu.org/licenses/agpl-3.0" target="_blank" rel="noopener noreferrer">
+  <img src="https://www.gnu.org/graphics/agplv3-155x51.png" alt="License: AGPL v3" height="28" />
 </a>
   
 [![Version](https://img.shields.io/github/v/tag/cod3ddot/rich-thumbnail-uploader?label=version&style=for-the-badge&color=blue&logo=git&logoColor=white)](https://github.com/cod3ddot/rich-thumbnail-uploader/releases)
 [![Language: Rust](https://img.shields.io/badge/Rust-orange.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
+</p>
 
 # Rich Thumbnail Uploader
 
