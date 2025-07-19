@@ -45,10 +45,7 @@ impl UploadService for CatboxUploader {
             let error_text = response
                 .text()
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(AppError::Upload(format!(
-                "Catbox API error: {}",
-                error_text
-            )));
+            return Err(AppError::Upload(format!("Catbox API error: {error_text}")));
         }
 
         let url = response.text()?;

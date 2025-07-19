@@ -38,7 +38,7 @@ impl UploadService for ImgurUploader {
 
         let response = client
             .post("https://api.imgur.com/3/image")
-            .header("Authorization", &format!("Client-ID {}", client_id))
+            .header("Authorization", &format!("Client-ID {client_id}"))
             .multipart(form)
             .send()?;
 
@@ -46,7 +46,7 @@ impl UploadService for ImgurUploader {
             let err = response
                 .text()
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(AppError::Upload(format!("Imgur API error: {}", err)));
+            return Err(AppError::Upload(format!("Imgur API error: {err}")));
         }
 
         let imgur_response: ImgurResponse = json::from_str(&response.text()?).unwrap();

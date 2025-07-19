@@ -40,6 +40,6 @@ fn main() -> Result<(), AppError> {
         config.user_agent.to_string(),
     )?;
 
-    println!("{}", upload_result);
+    println!("{upload_result}");
     Ok(())
 }

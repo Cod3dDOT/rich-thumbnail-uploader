@@ -66,12 +66,12 @@ pub struct Config {
 impl Config {
     pub fn parse(mut pargs: Arguments) -> Result<Self, AppError> {
         if pargs.contains(["-V", "--version"]) {
-            println!("{}", UASTRING);
+            println!("{UASTRING}");
             exit(0);
         }
 
         if pargs.contains(["-h", "--help"]) {
-            println!("{}", HELP);
+            println!("{HELP}");
             exit(0);
         }
 
