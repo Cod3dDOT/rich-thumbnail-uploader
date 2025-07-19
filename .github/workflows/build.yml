@@ -108,12 +108,20 @@ jobs:
 
       - name: Import GPG key
         run: |
-          echo "${{ secrets.GPG_SIGNING_KEY }}" \
-            | gpg --batch --allow-secret-key-import --import
+            echo "${{ secrets.GPG_SIGNING_KEY }}" \
+                | gpg --batch --allow-secret-key-import --import
+
+            gpg --list-secret-keys --with-colons
 
       - name: Sign the checksum file
         run: |
-          gpg --batch --yes --pinentry-mode loopback --passphrase ${{ secrets.GPG_PASSPHRASE }} --armor --detach-sign ./bin/rich-thumbnail-uploader.exe.sha256
+            KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ { print $5; exit }')
+            gpg --batch --yes \
+                --pinentry-mode loopback \
+                --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+                --local-user "$KEY_ID" \
+                --output ./bin/rich-thumbnail-uploader.exe.sha256.asc \
+                --detach-sign ./bin/rich-thumbnail-uploader.exe.sha256
 
       - name: Extract latest changelog entry
         id: changelog
