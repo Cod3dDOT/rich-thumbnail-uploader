@@ -23,6 +23,13 @@ jobs:
           script: |
             core.setFailed('IMGUR_CLIENT_ID secret not set!')
 
+  check-reuse:
+    name: Check REUSE compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check REUSE compliance
+        uses: fsfe/reuse-action@v5
+
   check-style:
     name: Check Style
     needs: [check-client-id]
@@ -55,9 +62,6 @@ jobs:
 
       - name: Run tests
         run: cargo test --locked --all-targets --all-features
-
-      - name: Check REUSE compliance
-        uses: fsfe/reuse-action@v5
 
   build:
     name: Build Windows binary
