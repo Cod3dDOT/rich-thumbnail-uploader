@@ -118,30 +118,31 @@ jobs:
 
       - name: Generate SHA256 checksum
         run: |
-          cd ./bin
-          sha256sum rich-thumbnail-uploader.exe > rich-thumbnail-uploader.exe.sha256
+            cd ./bin
+            sha256sum rich-thumbnail-uploader.exe > rich-thumbnail-uploader.exe.sha256
 
-      - name: Import GPG key
-        if: ${{ env.GPG_SIGNING_KEY != '' }}
-        env:
-          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+      - name: Setup isolated GPG environment
         run: |
-          echo "${{ secrets.GPG_SIGNING_KEY }}" \
-           | base64 --decode --ignore-garbage \
-           | gpg --batch --allow-secret-key-import --import
+            GNUPGHOME="$PWD/releaser-gpg"
+            export GNUPGHOME
+            mkdir -p "$GNUPGHOME"
+            chmod 0700 "$GNUPGHOME"
+
+      - name: Import GPG key and extract key ID
+        run: |
+            echo "${{ secrets.GPG_SIGNING_KEY }}" \
+                | base64 --decode --ignore-garbage \
+                | gpg --batch --allow-secret-key-import --import
+            KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ { print $5; exit }')
+            echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
 
       - name: Sign the checksum file
-        if: ${{ env.GPG_SIGNING_KEY != '' && env.GPG_PASSPHRASE != '' && env.GPG_KEY_ID != '' }}
-        env:
-          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
         run: |
-          cd ./bin
-          gpg --batch --yes \
+            cd bin
+            gpg --batch --yes \
             --pinentry-mode loopback \
             --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-            --local-user "${{ secrets.GPG_KEY_ID }}" \
+            --local-user "$GPG_KEY_ID" \
             --output rich-thumbnail-uploader.exe.sha256.asc \
             --detach-sign rich-thumbnail-uploader.exe.sha256
 
