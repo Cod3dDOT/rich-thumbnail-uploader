@@ -126,7 +126,7 @@ jobs:
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         run: |
-          echo "${{ secrets.GPG_SIGNING_KEY }}"
+          echo "${{ secrets.GPG_SIGNING_KEY }}" \
            | base64 --decode --ignore-garbage \
            | gpg --batch --allow-secret-key-import --import
 
