@@ -50,7 +50,7 @@ cargo build --release
 2. File -> Preferences -> Discord Rich Presence Integration -> Advanced
 3. Set upload command as the path to the executable, with any options you would like
 
-Example: `C:\Users\user\apps\rich-thumbnail-uploader\rich-thumbnail-uploader.exe -s catbox -f webp`
+Example: `C:\Users\user\rich-thumbnail-uploader.exe -s catbox -f webp`
 
 
 ## Options
