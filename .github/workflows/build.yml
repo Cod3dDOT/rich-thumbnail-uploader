@@ -113,8 +113,7 @@ jobs:
 
       - name: Sign the checksum file
         run: |
-          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-            --armor --detach-sign ./bin/rich-thumbnail-uploader.exe.sha256
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --armor --detach-sign ./bin/rich-thumbnail-uploader.exe.sha256
 
       - name: Extract latest changelog entry
         id: changelog
