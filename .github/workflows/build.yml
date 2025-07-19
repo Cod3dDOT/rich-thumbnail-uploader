@@ -1,4 +1,3 @@
-# Based on the template in https://github.com/FedericoPonzi/rust-ci
 name: Build binaries
 
 on:
@@ -16,7 +15,7 @@ jobs:
     env:
       IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
     steps:
-      - name: A/B Check
+      - name: Check secret exists
         if: ${{ env.IMGUR_CLIENT_ID == '' }}
         uses: actions/github-script@v7
         with:
@@ -34,57 +33,68 @@ jobs:
       - name: Install rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Run format check
         run: cargo fmt --all -- --check
 
-      - name: Run unit + integration tests
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run tests
         run: cargo test --locked --all-targets --all-features
 
       - name: Check REUSE compliance
         uses: fsfe/reuse-action@v5
 
   build:
-    name: Build binary
+    name: Build Windows binary
     needs: [check-style]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [x86_64-pc-windows-gnu]
-    outputs:
-      target: ${{ steps.set-output.outputs.target }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build target (release)
-        id: build
-        uses: houseabsolute/actions-rust-cross@v1
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
         with:
-          target: ${{ matrix.target }}
-          args: "--release --locked"
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release binary
+        run: cargo build --release --locked
         env:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
-
-      - name: Save target info
-        id: set-output
-        run: echo "target=${{ matrix.target }}" >> $GITHUB_OUTPUT
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: rich-thumbnail-uploader.exe
-          path: target/${{ matrix.target }}/release/rich-thumbnail-uploader.exe
+          path: target/release/rich-thumbnail-uploader.exe
 
   create-release:
     name: Publish Release
     needs: [build]
-    if: github.ref_type == 'tag'
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [x86_64-pc-windows-gnu]
     steps:
       - uses: actions/checkout@v4
 
@@ -102,40 +112,42 @@ jobs:
           args: -q --best --lzma
 
       - name: Generate SHA256 checksum
-        id: checksum
         run: |
-          sha256sum ./bin/rich-thumbnail-uploader.exe > ./bin/rich-thumbnail-uploader.exe.sha256
+          cd ./bin
+          sha256sum rich-thumbnail-uploader.exe > rich-thumbnail-uploader.exe.sha256
 
       - name: Import GPG key
+        if: ${{ secrets.GPG_SIGNING_KEY != '' }}
         run: |
-            echo "${{ secrets.GPG_SIGNING_KEY }}" \
-                | gpg --batch --allow-secret-key-import --import
-
-            gpg --list-secret-keys --with-colons
+          echo "${{ secrets.GPG_SIGNING_KEY }}" | gpg --batch --allow-secret-key-import --import
 
       - name: Sign the checksum file
+        if: ${{ secrets.GPG_SIGNING_KEY != '' && secrets.GPG_PASSPHRASE != '' }}
         run: |
-            KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ { print $5; exit }')
-            gpg --batch --yes \
-                --pinentry-mode loopback \
-                --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-                --local-user "$KEY_ID" \
-                --output ./bin/rich-thumbnail-uploader.exe.sha256.asc \
-                --detach-sign ./bin/rich-thumbnail-uploader.exe.sha256
+          cd ./bin
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ { print $5; exit }')
+          gpg --batch --yes \
+            --pinentry-mode loopback \
+            --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+            --local-user "$KEY_ID" \
+            --output rich-thumbnail-uploader.exe.sha256.asc \
+            --detach-sign rich-thumbnail-uploader.exe.sha256
 
       - name: Extract latest changelog entry
-        id: changelog
         run: |
+          if [ -f CHANGES.md ]; then
             awk '/^## \[/ { if (found) exit; found=1 } found' CHANGES.md > latest_changes.md
+          else
+            echo "Release ${{ github.ref_name }}" > latest_changes.md
+          fi
 
       - name: Create GitHub Release
-        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/rich-thumbnail-uploader.exe
-            bin/rich-thumbnail-uploader.exe.sha256
-            bin/rich-thumbnail-uploader.exe.sha256.asc
+            ./bin/rich-thumbnail-uploader.exe
+            ./bin/rich-thumbnail-uploader.exe.sha256
+            ./bin/rich-thumbnail-uploader.exe.sha256.asc
           body_path: latest_changes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
