@@ -1,6 +1,6 @@
 [![Rich Thumbnail Uploader](https://cod3d.dev/img/readme-rich_thumbnail_uploader.gif)](https://github.com/cod3ddot/rich-thumbnail-uploader)
 
-<a href="https://www.gnu.org/licenses/agpl-3.0" target="_blank" rel="noopener noreferrer">
+<a href="https://www.gnu.org/licenses/agpl-3.0" target="_blank" rel="noopener noreferrer" style="display:inline">
   <img src="https://www.gnu.org/graphics/agplv3-155x51.png" alt="License: AGPL v3" height="28" style="vertical-align:middle;"/>
 </a>
   
