@@ -57,12 +57,12 @@ Example: `C:\Users\user\apps\rich-thumbnail-uploader\rich-thumbnail-uploader.exe
 
 ```bash
 Options:
-    -d <DIMS>        Dimensions to resize the image to (maintains aspect ratio) [default: 256]
-    -s <SERVICE>  Image hosting service to use [default: imgur] [possible values: imgur, catbox]
-    -f <FORMAT>    Preffered image format [default: png] [possible values: png, webp]
-    --uid <UID>          Optional uid (overrides provided client id for imgur / sets user hash for catbox)
-    -h, --help               Print help
-    -V, --version            Print version
+    -d <DIMS>           Dimensions to resize the image to (maintains aspect ratio) [default: 256]
+    -s <SERVICE>        Image hosting service to use [default: imgur] [possible values: imgur, catbox]
+    -f <FORMAT>         Preffered image format [default: png] [possible values: png, webp]
+    --uid <UID>         Optional uid (overrides provided client id for imgur / sets user hash for catbox)
+    -h, --help          Print help
+    -V, --version       Print version
 ```
 ## License
 
