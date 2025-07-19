@@ -1,8 +1,8 @@
 [![Rich Thumbnail Uploader](https://cod3d.dev/img/readme-rich_thumbnail_uploader.gif)](https://github.com/cod3ddot/rich-thumbnail-uploader)
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/github/v/tag/cod3ddot/rich-thumbnail-uploader?label=version&style=for-the-badge)](https://github.com/cod3ddot/rich-thumbnail-uploader/releases)
-[![Language: Rust](https://img.shields.io/badge/language-Rust-orange.svg?style=for-the-badge)](https://www.rust-lang.org)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg?style=for-the-badge&logo=gnu&logoColor=white)](https://www.gnu.org/licenses/agpl-3.0)
+[![Version](https://img.shields.io/github/v/tag/cod3ddot/rich-thumbnail-uploader?label=version&style=for-the-badge&logo=git&logoColor=white)](https://github.com/cod3ddot/rich-thumbnail-uploader/releases)
+[![Language: Rust](https://img.shields.io/badge/Rust-orange.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 
 # Rich Thumbnail Uploader
 
