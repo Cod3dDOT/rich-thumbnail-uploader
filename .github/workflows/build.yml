@@ -207,6 +207,21 @@ jobs:
           files: "./bin/rich-thumbnail-uploader.exe"
           args: -q --best --lzma
 
+      - name: Generate SHA256 checksum
+        id: checksum
+        run: |
+          sha256sum ./bin/rich-thumbnail-uploader.exe > ./bin/rich-thumbnail-uploader.exe.sha256
+
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.GPG_SIGNING_KEY }}" \
+            | gpg --batch --allow-secret-key-import --import
+
+      - name: Sign the checksum file
+        run: |
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+            --armor --detach-sign ./bin/rich-thumbnail-uploader.exe.sha256
+
       - name: Extract latest changelog entry
         id: changelog
         run: |
@@ -218,6 +233,8 @@ jobs:
         with:
           files: |
             bin/rich-thumbnail-uploader.exe
+            bin/rich-thumbnail-uploader.exe.sha256
+            bin/rich-thumbnail-uploader.exe.sha256.asc
           body_path: latest_changes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,7 +1,7 @@
 [package]
 name = "rich-thumbnail-uploader"
 description = "Thumbnail uploader for foo_discord_rich"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/cod3ddot/rich-thumbnail-uploader"
@@ -12,6 +12,11 @@ publish = false
 
 [badges]
 maintenance = { status = "passively-maintained" }
+
+[package.metadata.winresource]
+OriginalFilename = "rich-thumbnail-uploader.exe"
+LegalCopyright = "Copyright © 2025 cod3ddot@proton.me"
+FileDescription = "Thumbnail uploader for foo_discord_rich"
 
 [dependencies]
 reqwest = { version = "0.12.22", default-features = false, features = [
@@ -25,8 +30,16 @@ image = { version = "0.25.6", default-features = false, features = [
     "png",
     "webp",
 ] }
-thiserror = "2.0.12"
-pico-args = "0.5"
+thiserror = { version = "2.0.12" }
+pico-args = { version = "0.5" }
+
+[dev-dependencies]
+tempfile = "3.10.1"
+image_hasher = "3.0.0"
+
+[build-dependencies]
+winresource = "0.1.23"
+embed-manifest = "1.3.1"
 
 [profile.release]
 opt-level = 'z'   # Optimize for size
@@ -34,7 +47,3 @@ lto = true        # Enable Link Time Optimization
 codegen-units = 1 # Reduce number of codegen units to increase optimizations
 panic = 'abort'   # Remove panic unwinding code
 strip = true      # Strip symbols from binary
-
-[dev-dependencies]
-tempfile = "3.10.1"
-image_hasher = "3.0.0"

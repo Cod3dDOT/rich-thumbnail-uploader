@@ -9,7 +9,13 @@ SPDX-FileCopyrightText = "2025 cod3ddot@proton.me"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 [[annotations]]
-path = [".gitignore", ".gitattributes", "Cargo.lock", "Cargo.toml"]
+path = [
+    ".gitignore",
+    ".gitattributes",
+    "Cargo.lock",
+    "Cargo.toml",
+    "resources/app.ico",
+]
 precedence = "override"
 SPDX-FileCopyrightText = "2025 cod3ddot@proton.me"
 SPDX-License-Identifier = "CC0-1.0"
