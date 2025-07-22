@@ -22,19 +22,12 @@ pub fn create_thumbnail(
     options: &ImageProcessingOptions,
 ) -> Result<ProcessedImage, AppError> {
     // Decode the source image
-    let reader = image::ImageReader::open(filepath)?.with_guessed_format()?;
-    let format = reader.format();
-    let img = reader.decode()?;
+    let img = image::ImageReader::open(filepath)?
+        .with_guessed_format()?
+        .decode()?;
 
     // Create thumbnail
     let thumbnail = img.thumbnail(options.size, options.size);
-
-    if format == Some(options.format.to_image_format()) {
-        return Ok(ProcessedImage {
-            data: thumbnail.into_bytes(),
-            format: options.format,
-        });
-    }
 
     let estimated_size = (thumbnail.width() * thumbnail.height()) as usize;
     let capacity = estimated_size.next_power_of_two();
