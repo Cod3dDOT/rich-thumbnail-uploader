@@ -19,10 +19,9 @@ LegalCopyright = "Copyright © 2025 cod3ddot@proton.me"
 FileDescription = "Thumbnail uploader for foo_discord_rich"
 
 [dependencies]
-reqwest = { version = "0.12.22", default-features = false, features = [
-    "blocking",
-    "multipart",
-    "native-tls",
+attohttpc = { version = "0.30.0", default-features = false, features = [
+    "tls-native",
+    "multipart-form",
 ] }
 miniserde = { version = "0.1.42" }
 image = { version = "0.25.6", default-features = false, features = [

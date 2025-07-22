@@ -4,14 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use std::io::Cursor;
-
 use image::ImageFormat;
 use miniserde::json;
-use reqwest::blocking::{
-    multipart::{Form, Part},
-    Client,
-};
 
 use crate::errors::AppError;
 use crate::image_processor::ProcessedImage;
@@ -22,24 +16,25 @@ pub struct ImgurUploader;
 
 impl UploadService for ImgurUploader {
     fn upload(
-        filename: String,
+        filename: &'static str,
         image: &ProcessedImage,
         client_id: String,
         user_agent: String,
     ) -> Result<String, AppError> {
-        let client = Client::builder().user_agent(user_agent).build()?;
+        let file = attohttpc::MultipartFile::new("image", &image.data)
+            .with_filename(filename)
+            .with_type(image.format.to_image_format().to_mime_type())
+            .map_err(|e| AppError::Upload(e.to_string()))?;
 
-        let part = Part::reader(Cursor::new(image.data.clone()))
-            .mime_str(image.format.to_mime_type())
-            .map_err(|e| AppError::Upload(e.to_string()))?
-            .file_name(filename);
+        let part = attohttpc::MultipartBuilder::new()
+            .with_file(file)
+            .build()
+            .map_err(|e| AppError::Upload(e.to_string()))?;
 
-        let form = Form::new().part("image", part);
-
-        let response = client
-            .post("https://api.imgur.com/3/image")
+        let response = attohttpc::post("https://api.imgur.com/3/image")
             .header("Authorization", &format!("Client-ID {client_id}"))
-            .multipart(form)
+            .header("User-Agent", &user_agent)
+            .body(part)
             .send()?;
 
         if !response.status().is_success() {

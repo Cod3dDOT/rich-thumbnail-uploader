@@ -25,16 +25,16 @@ Options:
 ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SupportedImageFormat {
+pub enum SupportedOutputFormat {
     Png,
     WebP,
 }
 
-impl SupportedImageFormat {
+impl SupportedOutputFormat {
     pub fn to_image_format(self) -> ImageFormat {
         match self {
-            SupportedImageFormat::Png => ImageFormat::Png,
-            SupportedImageFormat::WebP => ImageFormat::WebP,
+            SupportedOutputFormat::Png => ImageFormat::Png,
+            SupportedOutputFormat::WebP => ImageFormat::WebP,
         }
     }
 
@@ -48,8 +48,8 @@ impl SupportedImageFormat {
 
     pub fn as_str(&self) -> &'static str {
         match self {
-            SupportedImageFormat::Png => "png",
-            SupportedImageFormat::WebP => "webp",
+            SupportedOutputFormat::Png => "png",
+            SupportedOutputFormat::WebP => "webp",
         }
     }
 }
@@ -58,7 +58,7 @@ impl SupportedImageFormat {
 pub struct Config {
     pub service: UploadServiceIdentifier,
     pub client_id: Option<String>,
-    pub image_format: SupportedImageFormat,
+    pub image_format: SupportedOutputFormat,
     pub image_dimensions: u32,
     pub user_agent: &'static str,
 }
@@ -85,14 +85,14 @@ impl Config {
             .map_err(|_| AppError::Config("Invalid service".into()))?
             .as_deref()
             .and_then(UploadServiceIdentifier::from_str)
-            .ok_or(AppError::Config("Invalid service".into()))?;
+            .unwrap_or(UploadServiceIdentifier::Catbox);
 
         let format = pargs
             .opt_value_from_str::<&str, String>("-f")
             .map_err(|_| AppError::Config("Invalid format".into()))?
             .as_deref()
-            .and_then(SupportedImageFormat::from_str)
-            .unwrap_or(SupportedImageFormat::Png);
+            .and_then(SupportedOutputFormat::from_str)
+            .unwrap_or(SupportedOutputFormat::Png);
 
         let uid = pargs
             .opt_value_from_str::<&str, String>("--uid")

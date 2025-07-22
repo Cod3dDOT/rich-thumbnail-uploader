@@ -28,7 +28,7 @@ fn main() -> Result<(), AppError> {
         &input_file,
         &ImageProcessingOptions {
             size: config.image_dimensions,
-            format: config.image_format.to_image_format(),
+            format: config.image_format,
         },
     )?;
 

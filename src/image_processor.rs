@@ -6,17 +6,15 @@
 
 use std::io::Cursor;
 
-use image::ImageFormat;
-
-use crate::errors::AppError;
+use crate::{config::SupportedOutputFormat, errors::AppError};
 
 pub struct ImageProcessingOptions {
     pub size: u32,
-    pub format: ImageFormat,
+    pub format: SupportedOutputFormat,
 }
 pub struct ProcessedImage {
     pub data: Vec<u8>,
-    pub format: ImageFormat,
+    pub format: SupportedOutputFormat,
 }
 
 pub fn create_thumbnail(
@@ -24,19 +22,32 @@ pub fn create_thumbnail(
     options: &ImageProcessingOptions,
 ) -> Result<ProcessedImage, AppError> {
     // Decode the source image
-    let img = image::open(filepath)?;
+    let reader = image::ImageReader::open(filepath)?.with_guessed_format()?;
+    let format = reader.format();
+    let img = reader.decode()?;
 
     // Create thumbnail
     let thumbnail = img.thumbnail(options.size, options.size);
 
-    // Convert to specified format
-    let mut buf = Cursor::new(Vec::new());
-    thumbnail.write_to(&mut buf, options.format)?;
+    if format == Some(options.format.to_image_format()) {
+        return Ok(ProcessedImage {
+            data: thumbnail.into_bytes(),
+            format: options.format,
+        });
+    }
 
-    Ok(ProcessedImage {
-        data: buf.into_inner(),
+    let estimated_size = (thumbnail.width() * thumbnail.height()) as usize;
+    let capacity = estimated_size.next_power_of_two();
+    let mut buffer = Vec::with_capacity(capacity);
+    thumbnail.write_to(
+        &mut Cursor::new(&mut buffer),
+        options.format.to_image_format(),
+    )?;
+
+    return Ok(ProcessedImage {
+        data: buffer,
         format: options.format,
-    })
+    });
 }
 
 #[cfg(test)]
@@ -67,7 +78,7 @@ mod tests {
 
         let options = ImageProcessingOptions {
             size: 100,
-            format: ImageFormat::Png,
+            format: SupportedOutputFormat::Png,
         };
 
         let result = create_thumbnail(std::path::Path::new(&file_path), &options).unwrap();
@@ -85,11 +96,11 @@ mod tests {
 
         let options = ImageProcessingOptions {
             size: 100,
-            format: ImageFormat::WebP,
+            format: SupportedOutputFormat::WebP,
         };
 
         let result = create_thumbnail(std::path::Path::new(&file_path), &options).unwrap();
-        assert_eq!(result.format, ImageFormat::WebP);
+        assert_eq!(result.format, SupportedOutputFormat::WebP);
 
         // Verify the data is actually WebP
         assert!(image::guess_format(&result.data).unwrap() == ImageFormat::WebP);
@@ -101,7 +112,7 @@ mod tests {
     fn test_create_thumbnail_invalid_file() {
         let options = ImageProcessingOptions {
             size: 100,
-            format: ImageFormat::Png,
+            format: SupportedOutputFormat::Png,
         };
 
         let result = create_thumbnail(std::path::Path::new("nonexistent_file.png"), &options);

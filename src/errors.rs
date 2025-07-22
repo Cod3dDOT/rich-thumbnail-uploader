@@ -21,7 +21,7 @@ pub enum AppError {
     FileNotFound(std::path::PathBuf),
 
     #[error("HTTP error: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(#[from] attohttpc::Error),
 
     #[error("Configuration error: {0}")]
     Config(String),

@@ -4,9 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use crate::{errors::AppError, image_processor::ProcessedImage};
+use crate::{config::SupportedOutputFormat, errors::AppError, image_processor::ProcessedImage};
 use image::ImageFormat;
 
 pub mod catbox;
@@ -48,15 +46,10 @@ pub fn upload(
     client_id: String,
     user_agent: String,
 ) -> Result<String, AppError> {
-    // random filename
-    let filename = format!(
-        "{}.{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_micros(),
-        image.format.extensions_str().first().unwrap()
-    );
+    let filename = match image.format {
+        SupportedOutputFormat::Png => "thumb.png",
+        SupportedOutputFormat::WebP => "thumb.webp",
+    };
     match service {
         UploadServiceIdentifier::Imgur => {
             imgur::ImgurUploader::upload(filename, image, client_id, user_agent)
@@ -69,7 +62,7 @@ pub fn upload(
 
 pub trait UploadService {
     fn upload(
-        filename: String,
+        filename: &'static str,
         image: &ProcessedImage,
         client_id: String,
         user_agent: String,

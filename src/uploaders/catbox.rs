@@ -5,11 +5,6 @@
  */
 
 use image::ImageFormat;
-use reqwest::blocking::{
-    multipart::{Form, Part},
-    Client,
-};
-use std::io::Cursor;
 
 use crate::errors::AppError;
 use crate::image_processor::ProcessedImage;
@@ -19,26 +14,26 @@ pub struct CatboxUploader;
 
 impl UploadService for CatboxUploader {
     fn upload(
-        filename: String,
+        filename: &'static str,
         image: &ProcessedImage,
         client_id: String,
         user_agent: String,
     ) -> Result<String, AppError> {
-        let client = Client::builder().user_agent(user_agent).build()?;
-
-        let part = Part::reader(Cursor::new(image.data.clone()))
-            .file_name(filename)
-            .mime_str(image.format.to_mime_type())
+        let file = attohttpc::MultipartFile::new("fileToUpload", &image.data)
+            .with_filename(filename)
+            .with_type(image.format.to_image_format().to_mime_type())
             .map_err(|e| AppError::Upload(e.to_string()))?;
 
-        let form = Form::new()
-            .text("reqtype", "fileupload")
-            .text("userhash", client_id)
-            .part("fileToUpload", part);
+        let part = attohttpc::MultipartBuilder::new()
+            .with_text("reqtype", "fileupload")
+            .with_text("userhash", &client_id)
+            .with_file(file)
+            .build()
+            .map_err(|e| AppError::Upload(e.to_string()))?;
 
-        let response = client
-            .post("https://catbox.moe/user/api.php")
-            .multipart(form)
+        let response = attohttpc::post("https://catbox.moe/user/api.php")
+            .header("User-Agent", &user_agent)
+            .body(part)
             .send()?;
 
         if !response.status().is_success() {
