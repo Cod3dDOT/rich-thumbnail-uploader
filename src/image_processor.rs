@@ -44,10 +44,10 @@ pub fn create_thumbnail(
         options.format.to_image_format(),
     )?;
 
-    return Ok(ProcessedImage {
+    Ok(ProcessedImage {
         data: buffer,
         format: options.format,
-    });
+    })
 }
 
 #[cfg(test)]
