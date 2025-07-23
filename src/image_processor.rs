@@ -19,7 +19,7 @@ pub struct ProcessedImage {
 
 pub fn create_thumbnail(
     filepath: &std::path::Path,
-    options: &ImageProcessingOptions,
+    options: ImageProcessingOptions,
 ) -> Result<ProcessedImage, AppError> {
     // Decode the source image
     let img = image::ImageReader::open(filepath)?
@@ -29,13 +29,15 @@ pub fn create_thumbnail(
     // Create thumbnail
     let thumbnail = img.thumbnail(options.size, options.size);
 
-    let estimated_size = (thumbnail.width() * thumbnail.height()) as usize;
-    let capacity = estimated_size.next_power_of_two();
-    let mut buffer = Vec::with_capacity(capacity);
+    // let estimated_size = (thumbnail.width() * thumbnail.height()) as usize;
+    // let capacity = estimated_size.next_power_of_two();
+    let mut buffer = Vec::new();
     thumbnail.write_to(
         &mut Cursor::new(&mut buffer),
         options.format.to_image_format(),
     )?;
+
+    // buffer.shrink_to_fit();
 
     Ok(ProcessedImage {
         data: buffer,
@@ -74,7 +76,7 @@ mod tests {
             format: SupportedOutputFormat::Png,
         };
 
-        let result = create_thumbnail(std::path::Path::new(&file_path), &options).unwrap();
+        let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
 
         // Load the resulting image to verify dimensions
         let img = image::load_from_memory(&result.data).unwrap();
@@ -92,7 +94,7 @@ mod tests {
             format: SupportedOutputFormat::WebP,
         };
 
-        let result = create_thumbnail(std::path::Path::new(&file_path), &options).unwrap();
+        let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
         assert_eq!(result.format, SupportedOutputFormat::WebP);
 
         // Verify the data is actually WebP
@@ -108,7 +110,7 @@ mod tests {
             format: SupportedOutputFormat::Png,
         };
 
-        let result = create_thumbnail(std::path::Path::new("nonexistent_file.png"), &options);
+        let result = create_thumbnail(std::path::Path::new("nonexistent_file.png"), options);
         assert!(result.is_err());
     }
 }

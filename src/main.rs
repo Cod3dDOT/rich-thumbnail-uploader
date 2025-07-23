@@ -26,13 +26,12 @@ fn main() -> Result<(), AppError> {
 
     let thumbnail = create_thumbnail(
         &input_file,
-        &ImageProcessingOptions {
+        ImageProcessingOptions {
             size: config.image_dimensions,
             format: config.image_format,
         },
     )?;
 
-    // Upload the image
     let upload_result = upload(
         config.service,
         &thumbnail,

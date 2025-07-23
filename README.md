@@ -1,6 +1,6 @@
 [![Rich Thumbnail Uploader](https://cod3d.dev/img/readme-rich_thumbnail_uploader.gif)](https://github.com/cod3ddot/rich-thumbnail-uploader)
 
-<p align="center">
+<div align="center">
   <a href="https://www.gnu.org/licenses/agpl-3.0" target="_blank" rel="noopener noreferrer">
     <img src="https://www.gnu.org/graphics/agplv3-155x51.png" alt="License: AGPL v3" height="28" />
   </a>
@@ -12,7 +12,7 @@
   <a href="https://www.rust-lang.org">
     <img src="https://img.shields.io/badge/Rust-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Language: Rust" />
   </a>
-</p>
+</div>
 
 # Rich Thumbnail Uploader
 
@@ -47,8 +47,7 @@ cargo build --release
 │   │   ├── imgur.rs
 │   │   ├── catbox.rs
 │   │   └── mod.rs
-│   ├── cli.rs              # Argument parsing with clap
-│   ├── config.rs           # Additional argument validation
+│   ├── config.rs           # CLI Arguments
 │   ├── errors.rs           # Contains error types
 │   ├── image_processor.rs  # Generates thumbnails
 │   └── main.rs             # Entry point

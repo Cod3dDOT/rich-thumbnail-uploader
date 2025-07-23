@@ -34,7 +34,6 @@ pico-args = { version = "0.5" }
 
 [dev-dependencies]
 tempfile = "3.10.1"
-image_hasher = "3.0.0"
 
 [build-dependencies]
 winresource = "0.1.23"

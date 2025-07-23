@@ -44,7 +44,8 @@ impl UploadService for ImgurUploader {
             return Err(AppError::Upload(format!("Imgur API error: {err}")));
         }
 
-        let imgur_response: ImgurResponse = json::from_str(&response.text()?).unwrap();
+        let imgur_response: ImgurResponse = json::from_str(&response.text()?)
+            .map_err(|e| AppError::Upload(format!("Failed to parse Imgur response: {e}")))?;
 
         if !imgur_response.success {
             return Err(AppError::Upload(
