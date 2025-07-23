@@ -12,7 +12,7 @@ mod uploaders;
 
 use crate::config::Config;
 use crate::errors::AppError;
-use crate::image_processor::{create_thumbnail, ImageProcessingOptions};
+use crate::image_processor::{ImageProcessingOptions, create_thumbnail};
 use crate::uploaders::upload;
 
 fn main() -> Result<(), AppError> {

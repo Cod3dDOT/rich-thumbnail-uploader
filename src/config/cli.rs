@@ -8,10 +8,10 @@ use pico_args::Arguments;
 use std::path::PathBuf;
 use std::process::exit;
 
-use crate::config::help::HELP;
 use crate::config::Config;
 use crate::config::SupportedOutputFormat;
 use crate::config::UASTRING;
+use crate::config::help::HELP;
 use crate::errors::AppError;
 use crate::uploaders::UploadServiceIdentifier;
 
