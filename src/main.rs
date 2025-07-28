@@ -3,6 +3,12 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+#![windows_subsystem = "console"]
+
+// Blow up if we try to compile without msvc, x64 arch, or windows.
+// The code should work, but is untested on all other platforms.
+#[cfg(not(all(target_env = "msvc", target_arch = "x86_64", target_os = "windows")))]
+compile_error!("Platform not supported!");
 
 mod config;
 mod errors;

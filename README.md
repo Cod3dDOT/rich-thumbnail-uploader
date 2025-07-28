@@ -39,24 +39,29 @@ cargo build --release
 ## Project Structure
 
 ```
+├── LICENCES/               # REUSE licenses (See README)
+├── resources/              # Windows metadata
 ├── src/
-│   ├── models/             # models for api responses
+│   ├── models/             # Models for api responses
 │   │   ├── imgur.rs
 │   │   └── mod.rs
-│   ├── uploaders/          # upload logic per service
+│   ├── uploaders/          # Upload logic per service
 │   │   ├── imgur.rs
 │   │   ├── catbox.rs
 │   │   └── mod.rs
-│   ├── config.rs           # CLI Arguments
+│   ├── config/             # CLI helpers
+│   │   ├── cli.rs
+│   │   ├── help.rs
+│   │   └── mod.rs
 │   ├── errors.rs           # Contains error types
 │   ├── image_processor.rs  # Generates thumbnails
 │   └── main.rs             # Entry point
 ├── Cargo.toml              # Crate metadata and dependencies
+├── build.rs                # Build logic (windows metadata)
 ├── CHANGES.md              # Changelog
-├── LICENSE                 # MIT
+├── COPYING                 # AGPL-3.0-or-later (See README)
 └── README.md               # This file
 ```
-
 
 ## Usage
 1. Save executable on disk
@@ -69,13 +74,20 @@ Example: `C:\Users\user\rich-thumbnail-uploader.exe -s catbox -f webp`
 ## Options
 
 ```bash
-Options:
-    -d <DIMS>           Dimensions to resize the image to (maintains aspect ratio) [default: 256]
-    -s <SERVICE>        Image hosting service to use [default: imgur] [possible values: imgur, catbox]
-    -f <FORMAT>         Preffered image format [default: png] [possible values: png, webp]
-    --uid <UID>         Optional uid (overrides provided client id for imgur / sets user hash for catbox)
-    -h, --help          Print help
-    -V, --version       Print version
+Rich Thumbnail Uploader - Upload thumbnails for Discord Rich Presence
+
+USAGE:
+    rich-thumbnail-uploader [OPTIONS]
+
+OPTIONS:
+    -d, --dimensions <DIMS>    Dimensions to resize image to (128-512) [default: 256]
+    -s, --service <SERVICE>    Image hosting service [default: catbox]
+                               [possible values: imgur, catbox]
+    -f, --format <FORMAT>      Output image format [default: png]
+                               [possible values: png, webp]
+        --uid <UID>           User ID for service authentication
+    -h, --help                Print help information
+    -V, --version             Print version information
 ```
 ## License
 
