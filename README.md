@@ -1,4 +1,4 @@
-[![Rich Thumbnail Uploader](https://cod3d.dev/img/readme-rich_thumbnail_uploader.gif)](https://github.com/cod3ddot/rich-thumbnail-uploader)
+[![Rich Thumbnail Uploader](./docs/github-header.gif)](https://github.com/cod3ddot/rich-thumbnail-uploader)
 
 <div align="center">
   <a href="https://www.gnu.org/licenses/agpl-3.0" target="_blank" rel="noopener noreferrer">
