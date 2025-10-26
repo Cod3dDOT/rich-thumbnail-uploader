@@ -88,11 +88,11 @@ jobs:
 
       - name: Build optimized binary
         run: |
-          set RUSTFLAGS=-Zlocation-detail=none -Zfmt-debug=none
-          cargo +nightly build --release --locked ^
-              --target x86_64-pc-windows-msvc ^
+          set RUSTFLAGS=-Zlocation-detail=none -Zfmt-debug=none -Zunstable-options -Cpanic=immediate-abort
+          cargo +nightly build --locked ^
               -Z build-std=std,panic_abort ^
-              -Z build-std-features=optimize_for_size
+              -Z build-std-features=optimize_for_size ^
+              --target x86_64-pc-windows-msvc --release
         shell: cmd
         env:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
