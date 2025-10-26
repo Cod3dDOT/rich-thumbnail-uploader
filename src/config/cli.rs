@@ -6,9 +6,13 @@
 
 use pico_args::Arguments;
 
-use crate::config::config::{Config, UASTRING};
-use crate::config::help::HELP;
-use crate::errors::AppError;
+use crate::{
+	config::{
+		config::{Config, UASTRING},
+		help::HELP,
+	},
+	errors::AppError,
+};
 
 // CLI parsing result that indicates what action to take
 pub(crate) enum CLIAction {

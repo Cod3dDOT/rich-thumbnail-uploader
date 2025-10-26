@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use crate::errors::AppError;
-use crate::image::thumbnail::Thumbnail;
-use crate::uploaders::UploadServiceImplementation;
+use crate::{
+	errors::AppError, image::thumbnail::Thumbnail, uploaders::UploadServiceImplementation,
+};
 
 pub(crate) struct CatboxUploader;
 

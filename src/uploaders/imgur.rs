@@ -6,10 +6,10 @@
 
 use miniserde::json;
 
-use crate::errors::AppError;
-use crate::image::thumbnail::Thumbnail;
-use crate::models::imgur::ImgurResponse;
-use crate::uploaders::UploadServiceImplementation;
+use crate::{
+	errors::AppError, image::thumbnail::Thumbnail, models::imgur::ImgurResponse,
+	uploaders::UploadServiceImplementation,
+};
 
 pub(crate) struct ImgurUploader;
 

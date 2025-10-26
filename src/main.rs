@@ -19,9 +19,13 @@ mod uploaders;
 
 use std::process::ExitCode;
 
-use crate::config::cli::{CLI, CLIAction};
-use crate::config::config::Config;
-use crate::errors::AppError;
+use crate::{
+	config::{
+		cli::{CLI, CLIAction},
+		config::Config,
+	},
+	errors::AppError,
+};
 
 fn main() -> ExitCode {
 	return match CLI::parse_args() {

@@ -107,10 +107,11 @@ pub(crate) fn create_thumbnail(
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use image::{GenericImageView, ImageBuffer, ImageFormat, Rgb};
 	use rand::Rng;
 	use tempfile::TempDir;
+
+	use super::*;
 
 	fn create_test_image(width: u32, height: u32, format: ImageFormat) -> (TempDir, String) {
 		let temp_dir = TempDir::new().unwrap();

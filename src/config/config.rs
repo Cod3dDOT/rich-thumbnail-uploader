@@ -7,8 +7,7 @@
 use image::ImageFormat;
 use pico_args::Arguments;
 
-use crate::errors::AppError;
-use crate::uploaders::UploadService;
+use crate::{errors::AppError, uploaders::UploadService};
 
 pub(crate) const UASTRING: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
