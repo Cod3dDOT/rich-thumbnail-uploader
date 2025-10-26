@@ -14,4 +14,3 @@ wrap_comments = true
 
 # Layout
 blank_lines_upper_bound = 1
-newline_style = "Unix"
