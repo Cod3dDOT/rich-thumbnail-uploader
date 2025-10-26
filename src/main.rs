@@ -13,7 +13,7 @@ compile_error!("Platform not supported!");
 mod config;
 mod errors;
 mod files;
-mod image_processor;
+mod image;
 mod models;
 mod uploaders;
 
@@ -50,12 +50,10 @@ fn main() -> ExitCode {
 fn run_application(config: Config) -> Result<(), AppError> {
 	let input_file = files::read_input_path()?;
 
-	let thumbnail = image_processor::create_thumbnail(
+	let thumbnail = image::thumbnail::create_thumbnail(
 		&input_file,
-		image_processor::ImageProcessingOptions {
-			size: config.image_dimensions,
-			format: config.image_format,
-		},
+		image::thumbnail::ThumbnailOptions::new(config.image_dimensions, config.image_format)
+			.with_quality(config.image_quality),
 	)?;
 
 	let upload_result = uploaders::upload(

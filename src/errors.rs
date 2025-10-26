@@ -21,5 +21,5 @@ pub(crate) enum AppError {
 	Http(#[from] attohttpc::Error),
 
 	#[error("Configuration error: {0}")]
-	Config(String),
+	Config(&'static str),
 }

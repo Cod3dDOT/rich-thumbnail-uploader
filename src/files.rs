@@ -14,10 +14,10 @@ pub(crate) fn read_input_path() -> Result<std::path::PathBuf, AppError> {
 
 	let trimmed = input.trim();
 	if trimmed.is_empty() {
-		return Err(AppError::Config("Expected input file path".into()));
+		return Err(AppError::Config("Expected input file path"));
 	}
 
-	return std::path::PathBuf::from(trimmed)
+	std::path::PathBuf::from(trimmed)
 		.canonicalize()
-		.map_err(AppError::from);
+		.map_err(AppError::from)
 }

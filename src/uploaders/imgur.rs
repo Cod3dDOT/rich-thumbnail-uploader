@@ -4,27 +4,26 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use image::ImageFormat;
 use miniserde::json;
 
 use crate::errors::AppError;
-use crate::image_processor::ProcessedImage;
+use crate::image::thumbnail::Thumbnail;
 use crate::models::imgur::ImgurResponse;
-use crate::uploaders::UploadService;
+use crate::uploaders::UploadServiceImplementation;
 
 pub(crate) struct ImgurUploader;
 
-impl UploadService for ImgurUploader {
+impl UploadServiceImplementation for ImgurUploader {
 	fn upload(
 		filename: &'static str,
-		image: &ProcessedImage,
+		image: &Thumbnail,
 		client_id: &str,
 		user_agent: &'static str,
 		timeout: u8,
 	) -> Result<String, AppError> {
 		let file = attohttpc::MultipartFile::new("image", &image.data)
 			.with_filename(filename)
-			.with_type(image.format.to_image_format().to_mime_type())
+			.with_type(image.format.to_mime_type())
 			.map_err(|e| AppError::Upload(e.to_string()))?;
 
 		let part = attohttpc::MultipartBuilder::new()
@@ -56,9 +55,5 @@ impl UploadService for ImgurUploader {
 		}
 
 		Ok(imgur_response.data.link)
-	}
-
-	fn formats() -> Vec<ImageFormat> {
-		vec![ImageFormat::Png]
 	}
 }

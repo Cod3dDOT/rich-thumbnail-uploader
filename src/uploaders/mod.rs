@@ -4,71 +4,65 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use crate::{config::SupportedOutputFormat, errors::AppError, image_processor::ProcessedImage};
+use crate::{errors::AppError, image::thumbnail::Thumbnail};
 use image::ImageFormat;
 
 pub(crate) mod catbox;
 pub(crate) mod imgur;
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum UploadServiceIdentifier {
+pub(crate) enum UploadService {
 	Imgur,
 	Catbox,
 }
 
-impl UploadServiceIdentifier {
-	pub(crate) fn as_str(&self) -> &'static str {
-		match self {
-			UploadServiceIdentifier::Imgur => "imgur",
-			UploadServiceIdentifier::Catbox => "catbox",
+impl UploadService {
+	pub(crate) fn from_str(s: &str) -> Result<Self, &'static str> {
+		match s {
+			"imgur" => Ok(Self::Imgur),
+			"catbox" => Ok(Self::Catbox),
+			_ => Err("Unknown upload service"),
 		}
 	}
 
-	pub(crate) fn formats(&self) -> Vec<ImageFormat> {
+	pub(crate) const fn formats(&self) -> &'static [ImageFormat] {
 		match self {
-			UploadServiceIdentifier::Imgur => imgur::ImgurUploader::formats(),
-			UploadServiceIdentifier::Catbox => catbox::CatboxUploader::formats(),
-		}
-	}
-
-	pub(crate) fn from_str(s: &str) -> Option<Self> {
-		match s.to_lowercase().as_str() {
-			"imgur" => Some(Self::Imgur),
-			"catbox" => Some(Self::Catbox),
-			_ => None,
+			UploadService::Imgur => &[ImageFormat::Jpeg, ImageFormat::Png],
+			UploadService::Catbox => &[ImageFormat::Jpeg, ImageFormat::Png, ImageFormat::WebP],
 		}
 	}
 }
 
 pub(crate) fn upload(
-	service: UploadServiceIdentifier,
-	image: &ProcessedImage,
+	service: UploadService,
+	image: &Thumbnail,
 	client_id: &str,
 	user_agent: &'static str,
 	timeout: u8,
 ) -> Result<String, AppError> {
 	let filename = match image.format {
-		SupportedOutputFormat::Png => "thumb.png",
-		SupportedOutputFormat::WebP => "thumb.webp",
+		ImageFormat::Png => "thumb.png",
+		ImageFormat::WebP => "thumb.webp",
+		ImageFormat::Jpeg => "thumb.jpg",
+		_ => "thumb.dat",
 	};
+
 	match service {
-		UploadServiceIdentifier::Imgur => {
+		UploadService::Imgur => {
 			imgur::ImgurUploader::upload(filename, image, client_id, user_agent, timeout)
 		}
-		UploadServiceIdentifier::Catbox => {
+		UploadService::Catbox => {
 			catbox::CatboxUploader::upload(filename, image, client_id, user_agent, timeout)
 		}
 	}
 }
 
-pub(crate) trait UploadService {
+pub(crate) trait UploadServiceImplementation {
 	fn upload(
 		filename: &'static str,
-		image: &ProcessedImage,
+		image: &Thumbnail,
 		client_id: &str,
 		user_agent: &'static str,
 		timeout: u8,
 	) -> Result<String, AppError>;
-
-	fn formats() -> Vec<ImageFormat>;
 }

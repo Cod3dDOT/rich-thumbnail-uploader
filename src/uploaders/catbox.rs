@@ -4,25 +4,23 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use image::ImageFormat;
-
 use crate::errors::AppError;
-use crate::image_processor::ProcessedImage;
-use crate::uploaders::UploadService;
+use crate::image::thumbnail::Thumbnail;
+use crate::uploaders::UploadServiceImplementation;
 
 pub(crate) struct CatboxUploader;
 
-impl UploadService for CatboxUploader {
+impl UploadServiceImplementation for CatboxUploader {
 	fn upload(
 		filename: &'static str,
-		image: &ProcessedImage,
+		image: &Thumbnail,
 		client_id: &str,
 		user_agent: &'static str,
 		timeout: u8,
 	) -> Result<String, AppError> {
 		let file = attohttpc::MultipartFile::new("fileToUpload", &image.data)
 			.with_filename(filename)
-			.with_type(image.format.to_image_format().to_mime_type())
+			.with_type(image.format.to_mime_type())
 			.map_err(|e| AppError::Upload(e.to_string()))?;
 
 		let part = attohttpc::MultipartBuilder::new()
@@ -51,9 +49,5 @@ impl UploadService for CatboxUploader {
 		}
 
 		Ok(url)
-	}
-
-	fn formats() -> Vec<ImageFormat> {
-		vec![ImageFormat::Png, ImageFormat::WebP]
 	}
 }
