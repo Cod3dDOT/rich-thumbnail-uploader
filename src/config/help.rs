@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-pub const HELP: &str = "\
+pub(crate) const HELP: &str = "\
 Rich Thumbnail Uploader - Upload thumbnails for Discord Rich Presence
 
 USAGE:

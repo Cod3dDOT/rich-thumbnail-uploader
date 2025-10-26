@@ -8,109 +8,110 @@ use std::io::Cursor;
 
 use crate::{config::SupportedOutputFormat, errors::AppError};
 
-pub struct ImageProcessingOptions {
-    pub size: u32,
-    pub format: SupportedOutputFormat,
-}
-pub struct ProcessedImage {
-    pub data: Vec<u8>,
-    pub format: SupportedOutputFormat,
+pub(crate) struct ImageProcessingOptions {
+	pub size: u32,
+	pub format: SupportedOutputFormat,
 }
 
-pub fn create_thumbnail(
-    filepath: &std::path::Path,
-    options: ImageProcessingOptions,
+pub(crate) struct ProcessedImage {
+	pub data: Vec<u8>,
+	pub format: SupportedOutputFormat,
+}
+
+pub(crate) fn create_thumbnail(
+	filepath: &std::path::Path,
+	options: ImageProcessingOptions,
 ) -> Result<ProcessedImage, AppError> {
-    // Decode the source image
-    let img = image::ImageReader::open(filepath)?
-        .with_guessed_format()?
-        .decode()?;
+	// Decode the source image
+	let img = image::ImageReader::open(filepath)?
+		.with_guessed_format()?
+		.decode()?;
 
-    // Create thumbnail
-    let thumbnail = img.thumbnail(options.size, options.size);
+	// Create thumbnail
+	let thumbnail = img.thumbnail(options.size, options.size);
 
-    // let estimated_size = (thumbnail.width() * thumbnail.height()) as usize;
-    // let capacity = estimated_size.next_power_of_two();
-    let mut buffer = Vec::new();
-    thumbnail.write_to(
-        &mut Cursor::new(&mut buffer),
-        options.format.to_image_format(),
-    )?;
+	// let estimated_size = (thumbnail.width() * thumbnail.height()) as usize;
+	// let capacity = estimated_size.next_power_of_two();
+	let mut buffer = Vec::new();
+	thumbnail.write_to(
+		&mut Cursor::new(&mut buffer),
+		options.format.to_image_format(),
+	)?;
 
-    // buffer.shrink_to_fit();
+	// buffer.shrink_to_fit();
 
-    Ok(ProcessedImage {
-        data: buffer,
-        format: options.format,
-    })
+	Ok(ProcessedImage {
+		data: buffer,
+		format: options.format,
+	})
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use image::{GenericImageView, ImageBuffer, ImageFormat, Rgb};
-    use tempfile::TempDir;
+	use super::*;
+	use image::{GenericImageView, ImageBuffer, ImageFormat, Rgb};
+	use tempfile::TempDir;
 
-    fn create_test_image(width: u32, height: u32) -> (TempDir, String) {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test_image.png");
+	fn create_test_image(width: u32, height: u32) -> (TempDir, String) {
+		let temp_dir = TempDir::new().unwrap();
+		let file_path = temp_dir.path().join("test_image.png");
 
-        let mut img = ImageBuffer::new(width, height);
+		let mut img = ImageBuffer::new(width, height);
 
-        // Fill with a simple pattern
-        for (x, y, pixel) in img.enumerate_pixels_mut() {
-            *pixel = Rgb([x as u8, y as u8, 100]);
-        }
+		// Fill with a simple pattern
+		for (x, y, pixel) in img.enumerate_pixels_mut() {
+			*pixel = Rgb([x as u8, y as u8, 100]);
+		}
 
-        img.save(&file_path).unwrap();
+		img.save(&file_path).unwrap();
 
-        (temp_dir, file_path.to_string_lossy().to_string())
-    }
+		(temp_dir, file_path.to_string_lossy().to_string())
+	}
 
-    #[test]
-    fn test_create_thumbnail_resizes_correctly() {
-        let (temp_dir, file_path) = create_test_image(200, 200);
+	#[test]
+	fn test_create_thumbnail_resizes_correctly() {
+		let (temp_dir, file_path) = create_test_image(200, 200);
 
-        let options = ImageProcessingOptions {
-            size: 100,
-            format: SupportedOutputFormat::Png,
-        };
+		let options = ImageProcessingOptions {
+			size: 100,
+			format: SupportedOutputFormat::Png,
+		};
 
-        let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
+		let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
 
-        // Load the resulting image to verify dimensions
-        let img = image::load_from_memory(&result.data).unwrap();
-        assert_eq!(img.dimensions(), (100, 100));
+		// Load the resulting image to verify dimensions
+		let img = image::load_from_memory(&result.data).unwrap();
+		assert_eq!(img.dimensions(), (100, 100));
 
-        drop(temp_dir); // Cleanup
-    }
+		drop(temp_dir); // Cleanup
+	}
 
-    #[test]
-    fn test_create_thumbnail_converts_format() {
-        let (temp_dir, file_path) = create_test_image(200, 200);
+	#[test]
+	fn test_create_thumbnail_converts_format() {
+		let (temp_dir, file_path) = create_test_image(200, 200);
 
-        let options = ImageProcessingOptions {
-            size: 100,
-            format: SupportedOutputFormat::WebP,
-        };
+		let options = ImageProcessingOptions {
+			size: 100,
+			format: SupportedOutputFormat::WebP,
+		};
 
-        let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
-        assert_eq!(result.format, SupportedOutputFormat::WebP);
+		let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
+		assert_eq!(result.format, SupportedOutputFormat::WebP);
 
-        // Verify the data is actually WebP
-        assert!(image::guess_format(&result.data).unwrap() == ImageFormat::WebP);
+		// Verify the data is actually WebP
+		assert!(image::guess_format(&result.data).unwrap() == ImageFormat::WebP);
 
-        drop(temp_dir); // Cleanup
-    }
+		drop(temp_dir); // Cleanup
+	}
 
-    #[test]
-    fn test_create_thumbnail_invalid_file() {
-        let options = ImageProcessingOptions {
-            size: 100,
-            format: SupportedOutputFormat::Png,
-        };
+	#[test]
+	fn test_create_thumbnail_invalid_file() {
+		let options = ImageProcessingOptions {
+			size: 100,
+			format: SupportedOutputFormat::Png,
+		};
 
-        let result = create_thumbnail(std::path::Path::new("nonexistent_file.png"), options);
-        assert!(result.is_err());
-    }
+		let result = create_thumbnail(std::path::Path::new("nonexistent_file.png"), options);
+		assert!(result.is_err());
+	}
 }

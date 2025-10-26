@@ -1,0 +1,16 @@
+edition = "2024"
+max_width = 100
+hard_tabs = true
+
+# Imports
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+
+# Docs & comments
+normalize_doc_attributes = true
+format_code_in_doc_comments = true
+wrap_comments = true
+
+# Layout
+blank_lines_upper_bound = 1
+newline_style = "Unix"

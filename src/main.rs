@@ -12,39 +12,60 @@ compile_error!("Platform not supported!");
 
 mod config;
 mod errors;
+mod files;
 mod image_processor;
 mod models;
 mod uploaders;
 
-use crate::config::Config;
+use std::process::ExitCode;
+
+use crate::config::cli::{CLI, CLIAction};
+use crate::config::config::Config;
 use crate::errors::AppError;
-use crate::image_processor::{ImageProcessingOptions, create_thumbnail};
-use crate::uploaders::upload;
 
-fn main() -> Result<(), AppError> {
-    let config = Config::from_env()?;
-    let input_file = config.read_input_path()?;
+fn main() -> ExitCode {
+	return match CLI::parse_args() {
+		Ok(CLIAction::Run(config)) => match run_application(config) {
+			Ok(_) => ExitCode::SUCCESS,
+			Err(e) => {
+				eprintln!("Error: {e}");
+				ExitCode::FAILURE
+			}
+		},
+		Ok(CLIAction::ShowHelp) => {
+			CLI::print_help();
+			ExitCode::SUCCESS
+		}
+		Ok(CLIAction::ShowVersion) => {
+			CLI::print_version();
+			ExitCode::SUCCESS
+		}
+		Err(e) => {
+			eprintln!("Error: {e}");
+			ExitCode::FAILURE
+		}
+	};
+}
 
-    // Validate file exists
-    if !input_file.exists() {
-        return Err(AppError::FileNotFound(input_file));
-    }
+fn run_application(config: Config) -> Result<(), AppError> {
+	let input_file = files::read_input_path()?;
 
-    let thumbnail = create_thumbnail(
-        &input_file,
-        ImageProcessingOptions {
-            size: config.image_dimensions,
-            format: config.image_format,
-        },
-    )?;
+	let thumbnail = image_processor::create_thumbnail(
+		&input_file,
+		image_processor::ImageProcessingOptions {
+			size: config.image_dimensions,
+			format: config.image_format,
+		},
+	)?;
 
-    let upload_result = upload(
-        config.service,
-        &thumbnail,
-        config.client_id.unwrap_or_default(),
-        config.user_agent.to_string(),
-    )?;
+	let upload_result = uploaders::upload(
+		config.service,
+		&thumbnail,
+		config.client_id.as_deref().unwrap_or(""),
+		config.user_agent,
+		config.timeout_seconds,
+	)?;
 
-    println!("{upload_result}");
-    Ok(())
+	println!("{upload_result}");
+	Ok(())
 }

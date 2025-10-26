@@ -7,22 +7,19 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum AppError {
-    #[error("IO error: {0}")]
-    IO(#[from] std::io::Error),
+pub(crate) enum AppError {
+	#[error("IO error: {0}")]
+	IO(#[from] std::io::Error),
 
-    #[error("Image processing error: {0}")]
-    Image(#[from] image::ImageError),
+	#[error("Image processing error: {0}")]
+	Image(#[from] image::ImageError),
 
-    #[error("Upload error: {0}")]
-    Upload(String),
+	#[error("Upload error: {0}")]
+	Upload(String),
 
-    #[error("File not found: {0}")]
-    FileNotFound(std::path::PathBuf),
+	#[error("HTTP error: {0}")]
+	Http(#[from] attohttpc::Error),
 
-    #[error("HTTP error: {0}")]
-    Http(#[from] attohttpc::Error),
-
-    #[error("Configuration error: {0}")]
-    Config(String),
+	#[error("Configuration error: {0}")]
+	Config(String),
 }

@@ -19,17 +19,17 @@ LegalCopyright = "Copyright © 2025 cod3ddot@proton.me"
 FileDescription = "Thumbnail uploader for foo_discord_rich"
 
 [dependencies]
-attohttpc = { version = "0.30.0", default-features = false, features = [
+attohttpc = { version = "0.30", default-features = false, features = [
     "tls-native",
     "multipart-form",
 ] }
-miniserde = { version = "0.1.42" }
-image = { version = "0.25.6", default-features = false, features = [
+miniserde = { version = "0.1" }
+image = { version = "0.25", default-features = false, features = [
     "jpeg",
     "png",
     "webp",
 ] }
-thiserror = { version = "2.0.12" }
+thiserror = { version = "2" }
 pico-args = { version = "0.5" }
 
 [dev-dependencies]
@@ -45,3 +45,14 @@ lto = true        # Enable Link Time Optimization
 codegen-units = 1 # Reduce number of codegen units to increase optimizations
 panic = 'abort'   # Remove panic unwinding code
 strip = true      # Strip symbols from binary
+
+[lints.rust]
+unsafe_code = "deny"
+unused = "deny"
+missing_debug_implementations = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+single_use_lifetimes = "deny"
+unreachable_pub = "warn"
+elided_lifetimes_in_paths = "deny"
+explicit_outlives_requirements = "deny"

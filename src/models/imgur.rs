@@ -7,12 +7,12 @@
 use miniserde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub struct ImgurResponse {
-    pub data: ImgurData,
-    pub success: bool,
+pub(crate) struct ImgurResponse {
+	pub data: ImgurData,
+	pub success: bool,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ImgurData {
-    pub link: String,
+pub(crate) struct ImgurData {
+	pub link: String,
 }

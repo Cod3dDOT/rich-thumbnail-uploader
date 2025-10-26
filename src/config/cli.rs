@@ -5,97 +5,45 @@
  */
 
 use pico_args::Arguments;
-use std::path::PathBuf;
-use std::process::exit;
 
-use crate::config::Config;
-use crate::config::SupportedOutputFormat;
-use crate::config::UASTRING;
+use crate::config::config::{Config, UASTRING};
 use crate::config::help::HELP;
 use crate::errors::AppError;
-use crate::uploaders::UploadServiceIdentifier;
 
-impl Config {
-    pub fn parse(mut pargs: Arguments) -> Result<Self, AppError> {
-        if pargs.contains(["-v", "--version"]) {
-            println!("{UASTRING}");
-            exit(0);
-        }
+// CLI parsing result that indicates what action to take
+pub(crate) enum CLIAction {
+	ShowHelp,
+	ShowVersion,
+	Run(Config),
+}
 
-        if pargs.contains(["-h", "--help"]) {
-            println!("{HELP}");
-            exit(0);
-        }
+/// Handles CLI argument parsing and determines the appropriate action
+pub(crate) struct CLI;
 
-        let dims = pargs
-            .opt_value_from_str::<[&str; 2], u32>(["-d", "--dimensions"])
-            .map_err(|_| AppError::Config("Invalid dimensions".into()))?
-            .unwrap_or(256);
+impl CLI {
+	/// Parse CLI arguments and return the appropriate action
+	pub(crate) fn parse_args() -> Result<CLIAction, AppError> {
+		let mut pargs = Arguments::from_env();
 
-        if !(128..=512).contains(&dims) {
-            return Err(AppError::Config("Invalid dimensions".into()));
-        }
+		// Handle meta-actions first
+		if pargs.contains(["-h", "--help"]) {
+			return Ok(CLIAction::ShowHelp);
+		}
 
-        let service = pargs
-            .opt_value_from_str::<[&str; 2], String>(["-s", "--service"])
-            .map_err(|_| AppError::Config("Invalid service".into()))?
-            .as_deref()
-            .and_then(UploadServiceIdentifier::from_str)
-            .unwrap_or(UploadServiceIdentifier::Catbox);
+		if pargs.contains(["-v", "--version"]) {
+			return Ok(CLIAction::ShowVersion);
+		}
 
-        let format = pargs
-            .opt_value_from_str::<[&str; 2], String>(["-f", "--format"])
-            .or_else(|_| pargs.opt_value_from_str::<&str, String>("--format"))
-            .map_err(|_| AppError::Config("Invalid format".into()))?
-            .as_deref()
-            .and_then(SupportedOutputFormat::from_str)
-            .unwrap_or(SupportedOutputFormat::Png);
+		// Parse actual configuration
+		let config = Config::parse(pargs)?;
+		Ok(CLIAction::Run(config))
+	}
 
-        let uid = pargs
-            .opt_value_from_str::<&str, String>("--uid")
-            .map_err(|_| AppError::Config("Invalid uid".into()))?;
+	pub(crate) fn print_help() {
+		println!("{HELP}");
+	}
 
-        let client_id = match service {
-            UploadServiceIdentifier::Imgur => {
-                uid.or_else(|| option_env!("IMGUR_CLIENT_ID").map(str::to_string))
-            }
-            UploadServiceIdentifier::Catbox => uid,
-        };
-
-        if matches!(service, UploadServiceIdentifier::Imgur) && client_id.is_none() {
-            return Err(AppError::Config("Imgur requires a client id".into()));
-        }
-
-        if !service.formats().contains(&format.to_image_format()) {
-            return Err(AppError::Config(format!(
-                "{} is not a valid format for {}",
-                format.as_str(),
-                service.as_str()
-            )));
-        }
-
-        Ok(Self {
-            service,
-            client_id,
-            image_format: format,
-            image_dimensions: dims,
-            user_agent: UASTRING,
-        })
-    }
-
-    pub fn from_env() -> Result<Self, AppError> {
-        Config::parse(Arguments::from_env())
-    }
-
-    pub fn read_input_path(&self) -> Result<PathBuf, AppError> {
-        use std::io::BufRead;
-        let stdin = std::io::stdin();
-        let mut lines = stdin.lock().lines();
-        let filepath = lines
-            .next()
-            .transpose()?
-            .ok_or_else(|| AppError::Config("Expected input file path".into()))?;
-
-        Ok(PathBuf::from(filepath.trim()))
-    }
+	pub(crate) fn print_version() {
+		println!("{UASTRING}");
+	}
 }
