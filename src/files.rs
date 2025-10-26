@@ -10,7 +10,7 @@ pub(crate) fn read_input_path() -> Result<std::path::PathBuf, AppError> {
 	let mut input = String::new();
 	std::io::stdin()
 		.read_line(&mut input)
-		.map_err(|e| AppError::IO(e))?;
+		.map_err(AppError::IO)?;
 
 	let trimmed = input.trim();
 	if trimmed.is_empty() {

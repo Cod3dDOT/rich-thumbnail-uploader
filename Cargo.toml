@@ -49,7 +49,7 @@ strip = true      # Strip symbols from binary
 
 [lints.rust]
 unsafe_code = "deny"
-unused = "deny"
+unused = { level = "deny", priority = -1 }
 missing_debug_implementations = "deny"
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"

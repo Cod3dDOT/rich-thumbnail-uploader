@@ -7,10 +7,7 @@
 use pico_args::Arguments;
 
 use crate::{
-	config::{
-		config::{Config, UASTRING},
-		help::HELP,
-	},
+	config::{Config, UASTRING, help::HELP},
 	errors::AppError,
 };
 
@@ -22,9 +19,9 @@ pub(crate) enum CLIAction {
 }
 
 /// Handles CLI argument parsing and determines the appropriate action
-pub(crate) struct CLI;
+pub(crate) struct Cli;
 
-impl CLI {
+impl Cli {
 	/// Parse CLI arguments and return the appropriate action
 	pub(crate) fn parse_args() -> Result<CLIAction, AppError> {
 		let mut pargs = Arguments::from_env();

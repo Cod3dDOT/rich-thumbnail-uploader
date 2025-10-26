@@ -25,7 +25,7 @@ impl UploadServiceImplementation for CatboxUploader {
 
 		let part = attohttpc::MultipartBuilder::new()
 			.with_text("reqtype", "fileupload")
-			.with_text("userhash", &client_id)
+			.with_text("userhash", client_id)
 			.with_file(file)
 			.build()
 			.map_err(|e| AppError::Upload(e.to_string()))?;

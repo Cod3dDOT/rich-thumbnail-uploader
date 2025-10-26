@@ -20,15 +20,12 @@ mod uploaders;
 use std::process::ExitCode;
 
 use crate::{
-	config::{
-		cli::{CLI, CLIAction},
-		config::Config,
-	},
+	config::cli::{CLIAction, Cli},
 	errors::AppError,
 };
 
 fn main() -> ExitCode {
-	return match CLI::parse_args() {
+	match Cli::parse_args() {
 		Ok(CLIAction::Run(config)) => match run_application(config) {
 			Ok(_) => ExitCode::SUCCESS,
 			Err(e) => {
@@ -37,21 +34,21 @@ fn main() -> ExitCode {
 			}
 		},
 		Ok(CLIAction::ShowHelp) => {
-			CLI::print_help();
+			Cli::print_help();
 			ExitCode::SUCCESS
 		}
 		Ok(CLIAction::ShowVersion) => {
-			CLI::print_version();
+			Cli::print_version();
 			ExitCode::SUCCESS
 		}
 		Err(e) => {
 			eprintln!("Error: {e}");
 			ExitCode::FAILURE
 		}
-	};
+	}
 }
 
-fn run_application(config: Config) -> Result<(), AppError> {
+fn run_application(config: config::Config) -> Result<(), AppError> {
 	let input_file = files::read_input_path()?;
 
 	let thumbnail = image::thumbnail::create_thumbnail(
