@@ -108,7 +108,6 @@ pub(crate) fn create_thumbnail(
 #[cfg(test)]
 mod tests {
 	use image::{GenericImageView, ImageBuffer, ImageFormat, Rgb};
-	use rand::Rng;
 	use tempfile::TempDir;
 
 	use super::*;
@@ -123,13 +122,12 @@ mod tests {
 		};
 		let file_path = temp_dir.path().join(filename);
 
-		let mut rng = rand::rng();
-		let mut img = ImageBuffer::new(width, height);
+		let mut img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(width, height);
 
 		for pixel in img.pixels_mut() {
-			let r: u8 = rng.random();
-			let g: u8 = rng.random();
-			let b: u8 = rng.random();
+			let r = (pixel.0[0] + 1) % 255;
+			let g = (pixel.0[1] + 2) % 255;
+			let b = (pixel.0[2] + 3) % 255;
 			*pixel = Rgb([r, g, b]);
 		}
 

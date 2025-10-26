@@ -14,13 +14,13 @@ jobs:
     name: Check if imgur client id secret exists
     runs-on: ubuntu-latest
     env:
-        IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+      IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
     steps:
       - name: Check secret exists
         if: ${{ env.IMGUR_CLIENT_ID == '' }}
         uses: actions/github-script@v7
         with:
-            script: core.setFailed('IMGUR_CLIENT_ID secret not set!')
+          script: core.setFailed('IMGUR_CLIENT_ID secret not set!')
 
   check-reuse:
     name: Check REUSE compliance
@@ -40,18 +40,18 @@ jobs:
       - name: Install rust
         uses: dtolnay/rust-toolchain@nightly
         with:
-            components: clippy, rustfmt
+          components: clippy, rustfmt
 
       - name: Cache cargo
         uses: actions/cache@v4
         with:
-            path: |
-                ~/.cargo/registry
-                ~/.cargo/git
-                target
-            key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-            restore-keys: |
-                ${{ runner.os }}-cargo-
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Run format check
         run: cargo fmt --all -- --check
@@ -72,36 +72,36 @@ jobs:
       - name: Install rust
         uses: dtolnay/rust-toolchain@nightly
         with:
-            components: rust-src
-            targets: x86_64-pc-windows-msvc
+          components: rust-src
+          targets: x86_64-pc-windows-msvc
 
       - name: Cache cargo
         uses: actions/cache@v4
         with:
-            path: |
-                ~/.cargo/registry
-                ~/.cargo/git
-                target
-            key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-            restore-keys: |
-                ${{ runner.os }}-cargo-
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Build optimized binary
         run: |
-            set RUSTFLAGS=-Zlocation-detail=none -Zfmt-debug=none
-            cargo +nightly build --release --locked ^
-                --target x86_64-pc-windows-msvc ^
-                -Z build-std=std,panic_abort ^
-                -Z build-std-features=optimize_for_size
+          set RUSTFLAGS=-Zlocation-detail=none -Zfmt-debug=none
+          cargo +nightly build --release --locked ^
+              --target x86_64-pc-windows-msvc ^
+              -Z build-std=std,panic_abort ^
+              -Z build-std-features=optimize_for_size
         shell: cmd
         env:
-            IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+          IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-            name: rich-thumbnail-uploader.exe
-            path: target/release/rich-thumbnail-uploader.exe
+          name: rich-thumbnail-uploader.exe
+          path: target/x86_64-pc-windows-msvc/release/rich-thumbnail-uploader.exe
 
   create-release:
     name: Publish Release
@@ -114,36 +114,36 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v4
         with:
-            name: rich-thumbnail-uploader.exe
-            path: ./bin
+          name: rich-thumbnail-uploader.exe
+          path: ./bin
 
       - name: Run UPX to reduce binary size
         uses: crazy-max/ghaction-upx@v3
         with:
-            version: latest
-            files: "./bin/rich-thumbnail-uploader.exe"
-            args: -q --best --lzma
+          version: latest
+          files: "./bin/rich-thumbnail-uploader.exe"
+          args: -q --best --lzma
 
       - name: Generate SHA256 checksum
         run: |
-            cd ./bin
-            sha256sum rich-thumbnail-uploader.exe > rich-thumbnail-uploader.exe.sha256
+          cd ./bin
+          sha256sum rich-thumbnail-uploader.exe > rich-thumbnail-uploader.exe.sha256
 
       - name: Import GPG
         id: gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
-            gpg_private_key: ${{ secrets.GPG_SIGNING_KEY }}
-            passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          gpg_private_key: ${{ secrets.GPG_SIGNING_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign the checksum file
         run: |
-            cd bin
-            export GPG_TTY="$(tty)"
-            gpg --batch --yes \
-                --local-user "${{ steps.gpg.outputs.fingerprint }}" \
-                --output rich-thumbnail-uploader.exe.sha256.asc \
-                --detach-sign rich-thumbnail-uploader.exe.sha256
+          cd bin
+          export GPG_TTY="$(tty)"
+          gpg --batch --yes \
+              --local-user "${{ steps.gpg.outputs.fingerprint }}" \
+              --output rich-thumbnail-uploader.exe.sha256.asc \
+              --detach-sign rich-thumbnail-uploader.exe.sha256
 
       - name: Extract latest changelog entry
         run: |
@@ -156,10 +156,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-            files: |
-                bin/rich-thumbnail-uploader.exe
-                bin/rich-thumbnail-uploader.exe.sha256
-                bin/rich-thumbnail-uploader.exe.sha256.asc
-            body_path: latest_changes.md
+          files: |
+            bin/rich-thumbnail-uploader.exe
+            bin/rich-thumbnail-uploader.exe.sha256
+            bin/rich-thumbnail-uploader.exe.sha256.asc
+          body_path: latest_changes.md
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
