@@ -1,0 +1,4 @@
+[toolchain]
+channel = "nightly-2025-10-26"
+components = ["rustfmt", "clippy", "rust-src"]
+targets = ["x86_64-pc-windows-msvc"]

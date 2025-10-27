@@ -24,8 +24,10 @@ Inspired by [rust-imgur-upload](https://github.com/s0hv/rust-imgur-upload).
 
 ## Supported Services
 
-- **Imgur** — converts to PNG
-- **Catbox** — converts to WebP or PNG
+| Service   | JPEG | PNG | WEBP |
+|-----------|------|-----|------|
+| Imgur     | [x]  | [x] | [ ]  |
+| Catbox    | [x]  | [x] | [x]  |
 
 ## Quick Setup
 

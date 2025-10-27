@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use miniserde::json;
-
 use crate::{
 	errors::AppError, image::thumbnail::Thumbnail, models::imgur::ImgurResponse,
 	uploaders::UploadServiceImplementation,
@@ -45,7 +43,7 @@ impl UploadServiceImplementation for ImgurUploader {
 			return Err(AppError::Upload(format!("Imgur API error: {err}")));
 		}
 
-		let imgur_response: ImgurResponse = json::from_str(&response.text()?)
+		let imgur_response: ImgurResponse = miniserde::json::from_str(&response.text()?)
 			.map_err(|e| AppError::Upload(format!("Failed to parse Imgur response: {e}")))?;
 
 		if !imgur_response.success {

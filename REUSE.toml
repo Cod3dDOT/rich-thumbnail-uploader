@@ -14,8 +14,12 @@ path = [
     ".gitattributes",
     "Cargo.lock",
     "Cargo.toml",
+    ".cargo/config.toml",
     "rustfmt.toml",
+    "rust-toolchain.toml",
     "resources/app.ico",
+    "resources/app.rc",
+    "resources/app.manifest",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2025 cod3ddot@proton.me"

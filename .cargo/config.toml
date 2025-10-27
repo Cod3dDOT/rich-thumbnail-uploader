@@ -1,0 +1,9 @@
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
+rustflags = [
+    #"-Zfmt-debug=none", # breaks attohttpc for some reason
+    "-Zlocation-detail=none",
+    "-Zunstable-options",
+    "-Cpanic=immediate-abort",
+    "-Ctarget-feature=+crt-static",
+]
