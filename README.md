@@ -16,7 +16,7 @@
 
 # Rich Thumbnail Uploader
 
-Thumbnail uploader for [`foo_discord_rich`](https://github.com/RemuSalminen/foo_discord_rich) — a plugin for Discord Rich Presence in foobar2000.
+Thumbnail uploader for [`foo_discord_rich`](https://github.com/RemuSalminen/foo_discord_rich) - a plugin for Discord Rich Presence in foobar2000.
 
 Uploads a thumbnail of album artwork to image hosting services and returns a link.
 

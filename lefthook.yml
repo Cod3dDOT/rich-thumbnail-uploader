@@ -1,0 +1,10 @@
+pre-push:
+  commands:
+    fmt:
+      run: cargo fmt --all -- --check
+      skip: [merge, rebase]
+    clippy:
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      skip: [merge, rebase]
+    reuse:
+      run: reuse lint

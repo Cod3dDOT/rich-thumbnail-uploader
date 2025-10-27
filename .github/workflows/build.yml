@@ -10,18 +10,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-client-id:
-    name: Check if imgur client id secret exists
-    runs-on: ubuntu-latest
-    env:
-      IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
-    steps:
-      - name: Check secret exists
-        if: ${{ env.IMGUR_CLIENT_ID == '' }}
-        uses: actions/github-script@v7
-        with:
-          script: core.setFailed('IMGUR_CLIENT_ID secret not set!')
-
   check-reuse:
     name: Check REUSE compliance
     runs-on: ubuntu-latest
@@ -31,7 +19,6 @@ jobs:
 
   check-style:
     name: Check Style
-    needs: [check-client-id]
     runs-on: windows-latest
     steps:
       - name: Checkout
