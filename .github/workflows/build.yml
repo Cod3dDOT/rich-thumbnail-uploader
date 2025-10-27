@@ -65,12 +65,15 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build release binary
-        run: >
-          cargo build --locked
-          -Z build-std=std,panic_abort
-          -Z build-std-features=optimize_for_size
-          --target x86_64-pc-windows-msvc
+        run: |
+          set RUSTFLAGS=-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort -Ctarget-feature=+crt-static
+          cargo build --locked ^
+          -Z build-std=std,panic_abort ^
+          -Z build-std-features=optimize_for_size ^
+          --target x86_64-pc-windows-msvc ^
           --release
+        shell:
+            cmd
         env:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
 
