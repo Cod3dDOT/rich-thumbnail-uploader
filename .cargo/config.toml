@@ -1,5 +1,7 @@
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld"
+
+[target.x86_64-pc-windows-msvc.profile.release]
 rustflags = [
     #"-Zfmt-debug=none", # breaks attohttpc for some reason
     "-Zlocation-detail=none",
