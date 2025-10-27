@@ -1,4 +1,3 @@
-# Build Windows binaries
 name: Build binaries
 
 on:
@@ -9,72 +8,69 @@ on:
       - "*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
 jobs:
   check-reuse:
     name: Check REUSE compliance
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Check REUSE compliance
-        uses: fsfe/reuse-action@v6
+      - uses: actions/checkout@v5
+      - uses: fsfe/reuse-action@v6
 
   check-style:
-    name: Check Style
+    name: Clippy, fmt, tests
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-      - name: 'Install rust-toolchain.toml'
+      - name: Install rust-toolchain.toml
         run: rustup toolchain install
 
-      - name: Cache cargo
-        uses: actions/cache@v4
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+          shared-key: "check-style"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run format check
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --locked --target x86_64-pc-windows-msvc --all-features -- -D warnings
 
       - name: Run tests
-        run: cargo test --locked --all-targets --all-features
+        run: cargo test --locked --target x86_64-pc-windows-msvc --all-features
 
   build:
-    name: Build Windows binary
-    needs: [check-style]
+    name: Build binary
+    needs: [check-reuse, check-style]
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
-      - name: 'Install rust-toolchain.toml'
+      - name: Install rust-toolchain.toml
         run: rustup toolchain install
 
-      - name: Cache cargo
-        uses: actions/cache@v4
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+          shared-key: "build"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build optimized binary
-        run: |
-          cargo build --locked ^
-              -Z build-std=std,panic_abort ^
-              -Z build-std-features=optimize_for_size ^
-              --target x86_64-pc-windows-msvc --release
-        shell: cmd
+      - name: Build release binary
+        run: >
+          cargo build --locked
+          -Z build-std=std,panic_abort
+          -Z build-std-features=optimize_for_size
+          --target x86_64-pc-windows-msvc
+          --release
         env:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
 
@@ -85,10 +81,11 @@ jobs:
           path: target/x86_64-pc-windows-msvc/release/rich-thumbnail-uploader.exe
 
   create-release:
-    name: Publish Release
+    name: Publish release
     needs: [build]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
 
@@ -126,6 +123,12 @@ jobs:
               --output rich-thumbnail-uploader.exe.sha256.asc \
               --detach-sign rich-thumbnail-uploader.exe.sha256
 
+      - name: Generate release attestation
+        id: attest
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: bin/rich-thumbnail-uploader.exe
+
       - name: Extract latest changelog entry
         run: |
           if [ -f CHANGES.md ]; then
@@ -141,6 +144,7 @@ jobs:
             bin/rich-thumbnail-uploader.exe
             bin/rich-thumbnail-uploader.exe.sha256
             bin/rich-thumbnail-uploader.exe.sha256.asc
+            ${{ steps.attest.outputs.bundle-path }}
           body_path: latest_changes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
