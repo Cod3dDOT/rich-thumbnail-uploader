@@ -27,38 +27,52 @@ pub(crate) struct Config {
 impl Config {
 	pub(crate) fn parse(mut pargs: Arguments) -> Result<Self, AppError> {
 		let dims = pargs
-			.opt_value_from_str::<[&str; 2], u32>(["-d", "--dimensions"])
-			.map_err(|_| AppError::Config("Invalid dimensions"))?
+			.opt_value_from_fn(["-d", "--dimensions"], |s| {
+				s.parse()
+					.ok()
+					.filter(|d| (128..=512).contains(d))
+					.ok_or("expected 128-512")
+			})?
 			.unwrap_or(256);
 
-		if !(128..=512).contains(&dims) {
-			return Err(AppError::Config("Invalid dimensions"));
-		}
-
 		let quality = pargs
-			.opt_value_from_str::<[&str; 2], u8>(["-q", "--quality"])
-			.or_else(|_| pargs.opt_value_from_str::<&str, u8>("--quality"))
-			.map_err(|_| AppError::Config("Invalid quality"))?
+			.opt_value_from_fn(["-q", "--quality"], |s| {
+				s.parse()
+					.ok()
+					.filter(|q| (1..=100).contains(q))
+					.ok_or("expected 1-100")
+			})?
 			.unwrap_or(80);
 
 		let service = pargs
-			.opt_value_from_str::<[&str; 2], String>(["-s", "--service"])
-			.map_err(|_| AppError::Config("Invalid service"))?
-			.as_deref()
-			.and_then(|s| UploadService::from_str(s).ok())
+			.opt_value_from_fn(["-s", "--service"], UploadService::from_str)?
 			.unwrap_or(UploadService::Catbox);
 
 		let format = pargs
-			.opt_value_from_str::<[&str; 2], String>(["-f", "--format"])
-			.or_else(|_| pargs.opt_value_from_str::<&str, String>("--format"))
-			.map_err(|_| AppError::Config("Invalid format"))?
-			.as_deref()
-			.and_then(ImageFormat::from_extension)
+			.opt_value_from_fn(["-f", "--format"], |s| {
+				ImageFormat::from_extension(s)
+					.filter(|f| {
+						matches!(f, ImageFormat::Png | ImageFormat::Jpeg | ImageFormat::WebP)
+					})
+					.ok_or("expected png, jpeg or webp")
+			})?
 			.unwrap_or(ImageFormat::Png);
 
-		let uid = pargs
-			.opt_value_from_str::<&str, String>("--uid")
-			.map_err(|_| AppError::Config("Invalid uid"))?;
+		let uid = pargs.opt_value_from_str("--uid")?;
+
+		let timeout_seconds = pargs
+			.opt_value_from_fn("--timeout", |s| {
+				s.parse()
+					.ok()
+					.filter(|&t| t > 0)
+					.ok_or("expected 1-255 seconds")
+			})?
+			.unwrap_or(10);
+
+		let unexpected = pargs.finish();
+		if !unexpected.is_empty() {
+			return Err(AppError::UnexpectedArgs(unexpected));
+		}
 
 		let client_id = match service {
 			UploadService::Imgur => {
@@ -66,11 +80,6 @@ impl Config {
 			}
 			UploadService::Catbox => uid,
 		};
-
-		let timeout_seconds = pargs
-			.opt_value_from_str::<&str, u8>("--timeout")
-			.map_err(|_| AppError::Config("Invalid timeout"))?
-			.unwrap_or(10);
 
 		if matches!(service, UploadService::Imgur) && client_id.is_none() {
 			return Err(AppError::Config("Imgur requires a client id"));
@@ -91,5 +100,63 @@ impl Config {
 			timeout_seconds,
 			user_agent: UASTRING,
 		})
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn parse(args: &[&str]) -> Result<Config, AppError> {
+		Config::parse(Arguments::from_vec(args.iter().map(Into::into).collect()))
+	}
+
+	#[test]
+	fn rejects_invalid_arguments() {
+		for args in [
+			&["-s", "imgurr"][..],
+			&["-f", "gif"],
+			&["-f", "bmp"],
+			&["-d", "127"],
+			&["-d", "513"],
+			&["-q", "0"],
+			&["-q", "101"],
+			&["--timeout", "0"],
+			&["--servce", "catbox"],
+			&["stray"],
+			&["-s", "imgur", "--uid", "id", "-f", "webp"],
+		] {
+			assert!(parse(args).is_err(), "{args:?} should be rejected");
+		}
+	}
+
+	#[test]
+	fn parses_valid_arguments() {
+		let config = parse(&[
+			"-s",
+			"imgur",
+			"--uid",
+			"id",
+			"-f",
+			"jpg",
+			"-d",
+			"512",
+			"-q",
+			"90",
+			"--timeout",
+			"30",
+		])
+		.unwrap();
+		assert_eq!(config.service, UploadService::Imgur);
+		assert_eq!(config.client_id.as_deref(), Some("id"));
+		assert_eq!(config.image_format, ImageFormat::Jpeg);
+		assert_eq!(
+			(
+				config.image_dimensions,
+				config.image_quality,
+				config.timeout_seconds
+			),
+			(512, 90, 30)
+		);
 	}
 }

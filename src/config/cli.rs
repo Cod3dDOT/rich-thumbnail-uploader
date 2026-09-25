@@ -31,7 +31,7 @@ impl Cli {
 			return Ok(CLIAction::ShowHelp);
 		}
 
-		if pargs.contains(["-v", "--version"]) {
+		if pargs.contains(["-V", "--version"]) {
 			return Ok(CLIAction::ShowVersion);
 		}
 

@@ -22,4 +22,10 @@ pub(crate) enum AppError {
 
 	#[error("Configuration error: {0}")]
 	Config(&'static str),
+
+	#[error("Invalid argument: {0}")]
+	Args(#[from] pico_args::Error),
+
+	#[error("Unexpected arguments: {0:?}")]
+	UnexpectedArgs(Vec<std::ffi::OsString>),
 }

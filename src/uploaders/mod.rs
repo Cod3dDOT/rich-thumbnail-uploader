@@ -22,7 +22,7 @@ impl UploadService {
 		match s {
 			"imgur" => Ok(Self::Imgur),
 			"catbox" => Ok(Self::Catbox),
-			_ => Err("Unknown upload service"),
+			_ => Err("expected imgur or catbox"),
 		}
 	}
 

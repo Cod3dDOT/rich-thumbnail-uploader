@@ -85,14 +85,16 @@ USAGE:
     rich-thumbnail-uploader [OPTIONS]
 
 OPTIONS:
-    -d, --dimensions <DIMS>    Dimensions to resize image to (128-512) [default: 256]
+    -d, --dimensions <DIMS>    Max width/height of the thumbnail (128-512) [default: 256]
     -s, --service <SERVICE>    Image hosting service [default: catbox]
                                [possible values: imgur, catbox]
     -f, --format <FORMAT>      Output image format [default: png]
-                               [possible values: png, webp]
-        --uid <UID>           User ID for service authentication
-    -h, --help                Print help information
-    -V, --version             Print version information
+                               [possible values: png, jpeg, webp (catbox only)]
+    -q, --quality <QUALITY>    JPEG quality (1-100) [default: 80]
+        --uid <UID>            Imgur client ID or catbox userhash
+        --timeout <SECONDS>    Network timeout (1-255) [default: 10]
+    -h, --help                 Print help information
+    -V, --version              Print version information
 ```
 ## License
 
