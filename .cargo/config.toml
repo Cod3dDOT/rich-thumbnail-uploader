@@ -1,2 +1,13 @@
-[target.x86_64-pc-windows-msvc]
+# Windows 7+ (foobar2000's minimum). Tier 3 target: std is built from source.
+[build]
+target = "x86_64-win7-windows-msvc"
+
+[unstable]
+build-std = ["std", "panic_abort"]
+
+[target.x86_64-win7-windows-msvc]
+linker = "rust-lld"
+
+# 32-bit, for foobar2000 users on 32-bit Windows
+[target.i686-win7-windows-msvc]
 linker = "rust-lld"

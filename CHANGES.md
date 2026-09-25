@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- 32-bit build (`rich-thumbnail-uploader-x86.exe`) for 32-bit Windows
+
+### Fixed
+- JPEG output failing for RGBA / grayscale+alpha / 16-bit cover art, and WebP output failing for 16-bit cover art
+- Binary required Windows 10; now runs on Windows 7+ like foobar2000 (built for `*-win7-windows-msvc`)
+- Malformed application manifest (undeclared `asmv3` namespace); it now also declares Windows 7/8/8.1 support
+
 ### Changed
 - Bump pinned toolchain to nightly-2026-09-25 (rustc 1.100.0)
+- Windows resources are built with `winresource` only; dropped `embed-resource` and `resources/app.rc`
+- Imgur response parsed without `miniserde` (dependency removed)
 
 ## [0.3.3] - 2025-10-26
 

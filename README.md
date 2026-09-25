@@ -29,13 +29,19 @@ Inspired by [rust-imgur-upload](https://github.com/s0hv/rust-imgur-upload).
 | Imgur     | [x]  | [x] | [ ]  |
 | Catbox    | [x]  | [x] | [x]  |
 
+## Requirements
+
+Windows 7 or newer, same as foobar2000.
+Use `rich-thumbnail-uploader.exe` on 64-bit Windows and `rich-thumbnail-uploader-x86.exe` on 32-bit Windows.
+
 ## Quick Setup
 
-Clone and build:
+Clone and build (needs `rustup`; the pinned nightly and `rust-src` are installed automatically):
 ```bash
-git clone https://github.com/your-username/rich-thumbnail-uploader
+git clone https://github.com/cod3ddot/rich-thumbnail-uploader
 cd rich-thumbnail-uploader
-cargo build --release
+cargo build --release                                  # 64-bit
+cargo build --release --target i686-win7-windows-msvc  # 32-bit
 ```
 
 ## Project Structure
@@ -44,9 +50,6 @@ cargo build --release
 ├── LICENCES/               # REUSE licenses (See README)
 ├── resources/              # Windows metadata
 ├── src/
-│   ├── models/             # Models for api responses
-│   │   ├── imgur.rs
-│   │   └── mod.rs
 │   ├── uploaders/          # Upload logic per service
 │   │   ├── imgur.rs
 │   │   ├── catbox.rs

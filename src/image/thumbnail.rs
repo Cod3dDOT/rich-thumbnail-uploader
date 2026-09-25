@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use image::{ImageEncoder, ImageFormat};
+use image::{
+	ExtendedColorType, ImageEncoder, ImageFormat,
+	codecs::{jpeg::JpegEncoder, png::PngEncoder, webp::WebPEncoder},
+};
 
 use crate::errors::AppError;
 
@@ -38,69 +41,32 @@ pub(crate) fn create_thumbnail(
 	filepath: &std::path::Path,
 	options: ThumbnailOptions,
 ) -> Result<Thumbnail, AppError> {
-	// Decode the source image
-	let img = image::ImageReader::open(filepath)
-		.map_err(AppError::from)?
-		.with_guessed_format()
-		.map_err(AppError::from)?
-		.decode()
-		.map_err(AppError::from)?;
+	let img = image::ImageReader::open(filepath)?
+		.with_guessed_format()?
+		.decode()?;
 
-	// Create thumbnail (preserves aspect ratio)
+	// Preserves aspect ratio
 	let thumbnail = img.thumbnail(options.size, options.size);
 
-	let bytes_per_pixel = match options.format {
-		ImageFormat::Jpeg => 3,
-		ImageFormat::Png => 4,
-		ImageFormat::WebP => 4,
-		_ => 4,
+	// Encoders only accept some colour types; normalise to 8-bit RGB(A).
+	let (w, h) = (thumbnail.width(), thumbnail.height());
+	let (pixels, color) = if options.format != ImageFormat::Jpeg && thumbnail.color().has_alpha() {
+		(thumbnail.into_rgba8().into_raw(), ExtendedColorType::Rgba8)
+	} else {
+		(thumbnail.into_rgb8().into_raw(), ExtendedColorType::Rgb8)
 	};
-	let estimated_capacity = (thumbnail.width() * thumbnail.height() * bytes_per_pixel) as usize;
-	let mut buffer = Vec::with_capacity(estimated_capacity);
 
+	let mut data = Vec::new();
 	match options.format {
-		ImageFormat::Jpeg => {
-			let mut encoder =
-				image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buffer, options.quality);
-
-			encoder
-				.encode(
-					thumbnail.as_bytes(),
-					thumbnail.width(),
-					thumbnail.height(),
-					thumbnail.color().into(),
-				)
-				.map_err(AppError::from)?;
-		}
-		ImageFormat::WebP => {
-			let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut buffer);
-			encoder
-				.encode(
-					thumbnail.as_bytes(),
-					thumbnail.width(),
-					thumbnail.height(),
-					thumbnail.color().into(),
-				)
-				.map_err(AppError::from)?;
-		}
-		ImageFormat::Png => {
-			let encoder = image::codecs::png::PngEncoder::new(&mut buffer);
-			encoder
-				.write_image(
-					thumbnail.as_bytes(),
-					thumbnail.width(),
-					thumbnail.height(),
-					thumbnail.color().into(),
-				)
-				.map_err(AppError::from)?;
-		}
+		ImageFormat::Jpeg => JpegEncoder::new_with_quality(&mut data, options.quality)
+			.write_image(&pixels, w, h, color),
+		ImageFormat::WebP => WebPEncoder::new_lossless(&mut data).write_image(&pixels, w, h, color),
+		ImageFormat::Png => PngEncoder::new(&mut data).write_image(&pixels, w, h, color),
 		_ => return Err(AppError::Config("Unsupported image format for thumbnail")),
-	}
-
-	buffer.shrink_to_fit();
+	}?;
 
 	Ok(Thumbnail {
-		data: buffer,
+		data,
 		format: options.format,
 	})
 }
@@ -163,6 +129,43 @@ mod tests {
 		assert!(image::guess_format(&result.data).unwrap() == ImageFormat::WebP);
 
 		drop(temp_dir); // Cleanup
+	}
+
+	/// Cover art is often RGBA or 16-bit; every output format must still encode
+	/// it.
+	#[test]
+	fn test_create_thumbnail_encodes_any_source_color_type() {
+		let sources = [
+			(
+				"rgba8.png",
+				image::DynamicImage::ImageRgba8(image::RgbaImage::new(64, 64)),
+			),
+			(
+				"rgb16.png",
+				image::DynamicImage::ImageRgb16(ImageBuffer::new(64, 64)),
+			),
+			(
+				"la8.png",
+				image::DynamicImage::ImageLumaA8(ImageBuffer::new(64, 64)),
+			),
+		];
+		let temp_dir = TempDir::new().unwrap();
+
+		for (name, source) in sources {
+			let path = temp_dir.path().join(name);
+			source.save(&path).unwrap();
+
+			for format in [ImageFormat::Jpeg, ImageFormat::Png, ImageFormat::WebP] {
+				let result = create_thumbnail(&path, ThumbnailOptions::new(32, format))
+					.unwrap_or_else(|e| panic!("{name} -> {format:?}: {e}"));
+				assert_eq!(image::guess_format(&result.data).unwrap(), format, "{name}");
+				assert_eq!(
+					image::load_from_memory(&result.data).unwrap().dimensions(),
+					(32, 32),
+					"{name} -> {format:?}"
+				);
+			}
+		}
 	}
 
 	#[test]

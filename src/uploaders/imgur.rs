@@ -5,8 +5,7 @@
  */
 
 use crate::{
-	errors::AppError, image::thumbnail::Thumbnail, models::imgur::ImgurResponse,
-	uploaders::UploadServiceImplementation,
+	errors::AppError, image::thumbnail::Thumbnail, uploaders::UploadServiceImplementation,
 };
 
 pub(crate) struct ImgurUploader;
@@ -43,15 +42,44 @@ impl UploadServiceImplementation for ImgurUploader {
 			return Err(AppError::Upload(format!("Imgur API error: {err}")));
 		}
 
-		let imgur_response: ImgurResponse = miniserde::json::from_str(&response.text()?)
-			.map_err(|e| AppError::Upload(format!("Failed to parse Imgur response: {e}")))?;
-
-		if !imgur_response.success {
-			return Err(AppError::Upload(
-				"Imgur reported upload failure".to_string(),
-			));
+		let body = response.text()?;
+		if !body.contains(r#""success":true"#) {
+			return Err(AppError::Upload(format!(
+				"Imgur reported upload failure: {body}"
+			)));
 		}
 
-		Ok(imgur_response.data.link)
+		parse_link(&body)
+			.ok_or_else(|| AppError::Upload(format!("Failed to parse Imgur response: {body}")))
+	}
+}
+
+/// Extracts `data.link`. Imgur escapes `/` as `\/`; links contain no other
+/// escapes.
+fn parse_link(body: &str) -> Option<String> {
+	let (_, rest) = body.split_once(r#""link":""#)?;
+	let (link, _) = rest.split_once('"')?;
+	Some(link.replace(r"\/", "/"))
+}
+
+#[cfg(test)]
+mod tests {
+	use super::parse_link;
+
+	#[test]
+	fn parse_link_unescapes_slashes() {
+		let body = r#"{"data":{"id":"a1B2c3","title":null,"link":"https:\/\/i.imgur.com\/a1B2c3.png","tags":[]},"success":true,"status":200}"#;
+		assert_eq!(
+			parse_link(body).as_deref(),
+			Some("https://i.imgur.com/a1B2c3.png")
+		);
+	}
+
+	#[test]
+	fn parse_link_missing_is_none() {
+		assert_eq!(
+			parse_link(r#"{"data":{"error":"x"},"success":false}"#),
+			None
+		);
 	}
 }

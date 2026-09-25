@@ -18,7 +18,6 @@ path = [
     "rustfmt.toml",
     "rust-toolchain.toml",
     "resources/app.ico",
-    "resources/app.rc",
     "resources/app.manifest",
     "lefthook.yml",
 ]

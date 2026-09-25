@@ -5,23 +5,18 @@
  */
 
 fn main() {
-	println!("cargo:rerun-if-changed=resources/app.ico");
-	println!("cargo:rerun-if-changed=resources/manifest.rc");
-	println!("cargo:rerun-if-changed=resources/manifest.manifest");
-
+	println!("cargo:rerun-if-changed=resources");
+	// winresource reads `[package.metadata.winresource]` from here
 	println!("cargo:rerun-if-changed=Cargo.toml");
-	println!("cargo:rerun-if-changed=build.rs");
 
-	let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
-
-	if target_os != "windows" {
+	if std::env::var("CARGO_CFG_TARGET_OS").unwrap() != "windows" {
 		return;
 	}
 
-	embed_resource::compile("resources/app.rc", embed_resource::NONE)
-		.manifest_optional()
+	// Version info comes from Cargo.toml
+	winresource::WindowsResource::new()
+		.set_icon("resources/app.ico")
+		.set_manifest_file("resources/app.manifest")
+		.compile()
 		.unwrap();
-
-	let res = winresource::WindowsResource::new();
-	res.compile().unwrap();
 }

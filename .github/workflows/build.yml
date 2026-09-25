@@ -38,32 +38,36 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --locked --target x86_64-pc-windows-msvc --all-features -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: Run tests
-        run: cargo test --locked --target x86_64-pc-windows-msvc --all-features
+        run: cargo test --locked
 
   build:
-    name: Build binary
+    name: Build binary (${{ matrix.target }})
     needs: [check-reuse, check-style]
     runs-on: windows-latest
     timeout-minutes: 10
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-win7-windows-msvc
+            exe: rich-thumbnail-uploader.exe
+          - target: i686-win7-windows-msvc
+            exe: rich-thumbnail-uploader-x86.exe
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-            cache-shared-key: "build" # propagates to Swatinem/rust-cache
+            cache-shared-key: "build-${{ matrix.target }}" # propagates to Swatinem/rust-cache
             rustflags: "" # Disable default rustflags to avoid conflicts
 
       - name: Build release binary
         run: |
           set RUSTFLAGS=-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort -Ctarget-feature=+crt-static
-          cargo build --locked ^
-          -Z build-std=std,panic_abort ^
-          -Z build-std-features=optimize_for_size ^
-          --target x86_64-pc-windows-msvc ^
-          --release
+          cargo build --locked -Z build-std-features=optimize_for_size --release --target ${{ matrix.target }} || exit /b 1
+          copy target\${{ matrix.target }}\release\rich-thumbnail-uploader.exe ${{ matrix.exe }}
         shell:
             cmd
         env:
@@ -72,8 +76,8 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v5
         with:
-          name: rich-thumbnail-uploader.exe
-          path: target/x86_64-pc-windows-msvc/release/rich-thumbnail-uploader.exe
+          name: ${{ matrix.exe }}
+          path: ${{ matrix.exe }}
 
   create-release:
     name: Publish release
@@ -84,23 +88,23 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Download binary artifact
+      - name: Download binary artifacts
         uses: actions/download-artifact@v6
         with:
-          name: rich-thumbnail-uploader.exe
           path: ./bin
+          merge-multiple: true
 
       - name: Run UPX to reduce binary size
         uses: crazy-max/ghaction-upx@v3
         with:
           version: latest
-          files: "./bin/rich-thumbnail-uploader.exe"
+          files: "./bin/*.exe"
           args: -q --best --lzma
 
-      - name: Generate SHA256 checksum
+      - name: Generate SHA256 checksums
         run: |
           cd ./bin
-          sha256sum rich-thumbnail-uploader.exe > rich-thumbnail-uploader.exe.sha256
+          for f in *.exe; do sha256sum "$f" > "$f.sha256"; done
 
       - name: Import GPG
         id: gpg
@@ -109,20 +113,22 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_SIGNING_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Sign the checksum file
+      - name: Sign the checksum files
         run: |
           cd bin
           export GPG_TTY="$(tty)"
-          gpg --batch --yes \
-              --local-user "${{ steps.gpg.outputs.fingerprint }}" \
-              --output rich-thumbnail-uploader.exe.sha256.asc \
-              --detach-sign rich-thumbnail-uploader.exe.sha256
+          for f in *.sha256; do
+            gpg --batch --yes \
+                --local-user "${{ steps.gpg.outputs.fingerprint }}" \
+                --output "$f.asc" \
+                --detach-sign "$f"
+          done
 
       - name: Generate release attestation
         id: attest
         uses: actions/attest-build-provenance@v3
         with:
-          subject-path: bin/rich-thumbnail-uploader.exe
+          subject-path: bin/*.exe
 
       - name: Extract latest changelog entry
         run: |
@@ -136,9 +142,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/rich-thumbnail-uploader.exe
-            bin/rich-thumbnail-uploader.exe.sha256
-            bin/rich-thumbnail-uploader.exe.sha256.asc
+            bin/*.exe
+            bin/*.sha256
+            bin/*.sha256.asc
             ${{ steps.attest.outputs.bundle-path }}
           body_path: latest_changes.md
         env:
