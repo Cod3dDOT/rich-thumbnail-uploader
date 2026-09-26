@@ -107,56 +107,52 @@ impl Config {
 mod tests {
 	use super::*;
 
-	fn parse(args: &[&str]) -> Result<Config, AppError> {
-		Config::parse(Arguments::from_vec(args.iter().map(Into::into).collect()))
+	fn parse(args: &str) -> Result<Config, AppError> {
+		Config::parse(Arguments::from_vec(
+			args.split_whitespace().map(Into::into).collect(),
+		))
 	}
 
 	#[test]
 	fn rejects_invalid_arguments() {
 		for args in [
-			&["-s", "imgurr"][..],
-			&["-f", "gif"],
-			&["-f", "bmp"],
-			&["-d", "127"],
-			&["-d", "513"],
-			&["-q", "0"],
-			&["-q", "101"],
-			&["--timeout", "0"],
-			&["--servce", "catbox"],
-			&["stray"],
-			&["-s", "imgur", "--uid", "id", "-f", "webp"],
+			"-s imgurr",
+			"-f gif",
+			"-f bmp",
+			"-d 127",
+			"-d 513",
+			"-q 0",
+			"-q 101",
+			"--timeout 0",
+			"--servce catbox",
+			"stray",
+			"-s imgur --uid id -f webp",
 		] {
-			assert!(parse(args).is_err(), "{args:?} should be rejected");
+			assert!(parse(args).is_err(), "`{args}` should be rejected");
 		}
 	}
 
 	#[test]
 	fn parses_valid_arguments() {
-		let config = parse(&[
-			"-s",
-			"imgur",
-			"--uid",
-			"id",
-			"-f",
-			"jpg",
-			"-d",
-			"512",
-			"-q",
-			"90",
-			"--timeout",
-			"30",
-		])
-		.unwrap();
-		assert_eq!(config.service, UploadService::Imgur);
-		assert_eq!(config.client_id.as_deref(), Some("id"));
-		assert_eq!(config.image_format, ImageFormat::Jpeg);
+		let c = parse("-s imgur --uid id -f jpg -d 512 -q 90 --timeout 30").unwrap();
+		assert_eq!(c.service, UploadService::Imgur);
+		assert_eq!(c.client_id.as_deref(), Some("id"));
+		assert_eq!(c.image_format, ImageFormat::Jpeg);
 		assert_eq!(
-			(
-				config.image_dimensions,
-				config.image_quality,
-				config.timeout_seconds
-			),
+			(c.image_dimensions, c.image_quality, c.timeout_seconds),
 			(512, 90, 30)
+		);
+	}
+
+	#[test]
+	fn defaults_match_help() {
+		let c = parse("").unwrap();
+		assert_eq!(c.service, UploadService::Catbox);
+		assert_eq!(c.client_id, None);
+		assert_eq!(c.image_format, ImageFormat::Png);
+		assert_eq!(
+			(c.image_dimensions, c.image_quality, c.timeout_seconds),
+			(256, 80, 10)
 		);
 	}
 }

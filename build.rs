@@ -13,7 +13,6 @@ fn main() {
 		return;
 	}
 
-	// Version info comes from Cargo.toml
 	winresource::WindowsResource::new()
 		.set_icon("resources/app.ico")
 		.set_manifest_file("resources/app.manifest")

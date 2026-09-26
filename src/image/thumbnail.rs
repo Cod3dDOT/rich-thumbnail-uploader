@@ -73,106 +73,75 @@ pub(crate) fn create_thumbnail(
 
 #[cfg(test)]
 mod tests {
-	use image::{GenericImageView, ImageBuffer, ImageFormat, Rgb};
+	use image::{ColorType, DynamicImage, GenericImageView, Rgb, RgbImage};
 	use tempfile::TempDir;
 
 	use super::*;
 
-	fn create_test_image(width: u32, height: u32, format: ImageFormat) -> (TempDir, String) {
-		let temp_dir = TempDir::new().unwrap();
-		let filename = match format {
-			ImageFormat::Jpeg => "test_image.jpeg",
-			ImageFormat::Png => "test_image.png",
-			ImageFormat::WebP => "test_image.webp",
-			_ => "test_image.dat",
-		};
-		let file_path = temp_dir.path().join(filename);
-
-		let mut img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(width, height);
-
-		for pixel in img.pixels_mut() {
-			let r = (pixel.0[0] + 1) % 255;
-			let g = (pixel.0[1] + 2) % 255;
-			let b = (pixel.0[2] + 3) % 255;
-			*pixel = Rgb([r, g, b]);
-		}
-
-		img.save(&file_path).unwrap();
-		(temp_dir, file_path.to_string_lossy().to_string())
-	}
-
+	/// Every input, including awkward colour types and misnamed files, becomes
+	/// a correctly sized thumbnail in every output format, keeping alpha where
+	/// possible.
 	#[test]
-	fn test_create_thumbnail_resizes_correctly() {
-		let (temp_dir, file_path) = create_test_image(200, 200, ImageFormat::Png);
-
-		let options = ThumbnailOptions::new(100, ImageFormat::Png);
-
-		let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
-
-		// Load the resulting image to verify dimensions
-		let img = image::load_from_memory(&result.data).unwrap();
-		assert_eq!(img.dimensions(), (100, 100));
-
-		drop(temp_dir); // Cleanup
-	}
-
-	#[test]
-	fn test_create_thumbnail_converts_format() {
-		let (temp_dir, file_path) = create_test_image(200, 200, ImageFormat::Png);
-
-		let options = ThumbnailOptions::new(100, ImageFormat::WebP);
-
-		let result = create_thumbnail(std::path::Path::new(&file_path), options).unwrap();
-		assert_eq!(result.format, ImageFormat::WebP);
-
-		// Verify the data is actually WebP
-		assert!(image::guess_format(&result.data).unwrap() == ImageFormat::WebP);
-
-		drop(temp_dir); // Cleanup
-	}
-
-	/// Cover art is often RGBA or 16-bit; every output format must still encode
-	/// it.
-	#[test]
-	fn test_create_thumbnail_encodes_any_source_color_type() {
-		let sources = [
-			(
-				"rgba8.png",
-				image::DynamicImage::ImageRgba8(image::RgbaImage::new(64, 64)),
-			),
-			(
-				"rgb16.png",
-				image::DynamicImage::ImageRgb16(ImageBuffer::new(64, 64)),
-			),
-			(
-				"la8.png",
-				image::DynamicImage::ImageLumaA8(ImageBuffer::new(64, 64)),
-			),
+	fn converts_any_input_to_any_output() {
+		let inputs = [
+			("rgb8.jpg", ImageFormat::Jpeg, ColorType::Rgb8),
+			("rgba8.png", ImageFormat::Png, ColorType::Rgba8),
+			("rgb16.png", ImageFormat::Png, ColorType::Rgb16),
+			("la8.png", ImageFormat::Png, ColorType::La8),
+			("rgba8.webp", ImageFormat::WebP, ColorType::Rgba8),
+			("rgb8.gif", ImageFormat::Gif, ColorType::Rgb8),
+			("rgb8.bmp", ImageFormat::Bmp, ColorType::Rgb8),
+			// The format comes from the content, not the extension.
+			("png-named.jpg", ImageFormat::Png, ColorType::Rgba8),
 		];
-		let temp_dir = TempDir::new().unwrap();
+		let dir = TempDir::new().unwrap();
 
-		for (name, source) in sources {
-			let path = temp_dir.path().join(name);
-			source.save(&path).unwrap();
+		for (name, input_format, color) in inputs {
+			let path = dir.path().join(name);
+			// Zero-filled: any alpha channel is fully transparent.
+			DynamicImage::new(64, 32, color)
+				.save_with_format(&path, input_format)
+				.unwrap();
 
 			for format in [ImageFormat::Jpeg, ImageFormat::Png, ImageFormat::WebP] {
-				let result = create_thumbnail(&path, ThumbnailOptions::new(32, format))
-					.unwrap_or_else(|e| panic!("{name} -> {format:?}: {e}"));
-				assert_eq!(image::guess_format(&result.data).unwrap(), format, "{name}");
-				assert_eq!(
-					image::load_from_memory(&result.data).unwrap().dimensions(),
-					(32, 32),
-					"{name} -> {format:?}"
-				);
+				let case = format!("{name} -> {format:?}");
+				let thumb = create_thumbnail(&path, ThumbnailOptions::new(32, format))
+					.unwrap_or_else(|e| panic!("{case}: {e}"));
+				assert_eq!(image::guess_format(&thumb.data).unwrap(), format, "{case}");
+
+				let out = image::load_from_memory(&thumb.data).unwrap();
+				assert_eq!(out.dimensions(), (32, 16), "{case}");
+				let transparent = color.has_alpha() && format != ImageFormat::Jpeg;
+				let alpha = if transparent { 0 } else { 255 };
+				assert_eq!(out.to_rgba8()[(0, 0)][3], alpha, "{case}");
 			}
 		}
 	}
 
 	#[test]
-	fn test_create_thumbnail_invalid_file() {
-		let options = ThumbnailOptions::new(100, ImageFormat::Png);
+	fn jpeg_quality_is_applied() {
+		let dir = TempDir::new().unwrap();
+		let path = dir.path().join("gradient.png");
+		RgbImage::from_fn(64, 64, |x, y| {
+			Rgb([(x * 4) as u8, (y * 4) as u8, ((x ^ y) * 4) as u8])
+		})
+		.save(&path)
+		.unwrap();
 
-		let result = create_thumbnail(std::path::Path::new("nonexistent_file.png"), options);
-		assert!(result.is_err());
+		let jpeg_len = |quality| {
+			let options = ThumbnailOptions::new(64, ImageFormat::Jpeg).with_quality(quality);
+			create_thumbnail(&path, options).unwrap().data.len()
+		};
+		assert!(jpeg_len(10) < jpeg_len(95));
+	}
+
+	#[test]
+	fn rejects_non_image_input() {
+		let dir = TempDir::new().unwrap();
+		let path = dir.path().join("cover.jpg");
+		std::fs::write(&path, "not an image").unwrap();
+
+		let result = create_thumbnail(&path, ThumbnailOptions::new(32, ImageFormat::Png));
+		assert!(matches!(result, Err(AppError::Image(_))));
 	}
 }

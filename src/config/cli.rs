@@ -11,22 +11,18 @@ use crate::{
 	errors::AppError,
 };
 
-// CLI parsing result that indicates what action to take
 pub(crate) enum CLIAction {
 	ShowHelp,
 	ShowVersion,
 	Run(Config),
 }
 
-/// Handles CLI argument parsing and determines the appropriate action
 pub(crate) struct Cli;
 
 impl Cli {
-	/// Parse CLI arguments and return the appropriate action
 	pub(crate) fn parse_args() -> Result<CLIAction, AppError> {
 		let mut pargs = Arguments::from_env();
 
-		// Handle meta-actions first
 		if pargs.contains(["-h", "--help"]) {
 			return Ok(CLIAction::ShowHelp);
 		}
@@ -35,7 +31,6 @@ impl Cli {
 			return Ok(CLIAction::ShowVersion);
 		}
 
-		// Parse actual configuration
 		let config = Config::parse(pargs)?;
 		Ok(CLIAction::Run(config))
 	}

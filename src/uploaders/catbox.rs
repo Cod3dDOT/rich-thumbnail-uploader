@@ -31,6 +31,7 @@ impl UploadServiceImplementation for CatboxUploader {
 			.map_err(|e| AppError::Upload(e.to_string()))?;
 
 		let response = attohttpc::post("https://catbox.moe/user/api.php")
+			.follow_redirects(false)
 			.connect_timeout(std::time::Duration::from_secs(timeout.into()))
 			.timeout(std::time::Duration::from_secs(timeout.into()))
 			.header("User-Agent", user_agent)
@@ -44,11 +45,6 @@ impl UploadServiceImplementation for CatboxUploader {
 			return Err(AppError::Upload(format!("Catbox API error: {error_text}")));
 		}
 
-		let url = response.text()?;
-		if url.is_empty() || !url.starts_with("https://") {
-			return Err(AppError::Upload("Catbox returned invalid URL".to_string()));
-		}
-
-		Ok(url)
+		Ok(response.text()?)
 	}
 }

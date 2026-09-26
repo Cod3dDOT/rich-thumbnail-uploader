@@ -5,8 +5,7 @@
  */
 #![windows_subsystem = "console"]
 
-// Blow up if we try to compile without msvc or windows.
-// The code should work, but is untested on all other platforms.
+// Only built and tested for Windows/MSVC.
 #[cfg(not(all(target_env = "msvc", target_os = "windows")))]
 compile_error!("Platform not supported!");
 

@@ -22,21 +22,25 @@ Uploads a thumbnail of album artwork to image hosting services and returns a lin
 
 Inspired by [rust-imgur-upload](https://github.com/s0hv/rust-imgur-upload).
 
-## Supported Services
+## Supported Formats
 
-| Service   | JPEG | PNG | WEBP |
-|-----------|------|-----|------|
-| Imgur     | [x]  | [x] | [ ]  |
-| Catbox    | [x]  | [x] | [x]  |
+|                  | JPEG | PNG | WEBP * | GIF * | BMP |
+| ---------------- | ---- | --- | ------ | ----- | --- |
+| Input artwork    | [x]  | [x] | [x]    | [x]   | [x] |
+| Upload to Imgur  | [x]  | [x] | [ ]    | [ ]   | [ ] |
+| Upload to Catbox | [x]  | [x] | [x]    | [ ]   | [ ] |
+
+\* Animated images: first frame only.
 
 ## Requirements
 
-Windows 7 or newer, same as foobar2000.
+Windows 7 or newer.
 Use `rich-thumbnail-uploader.exe` on 64-bit Windows and `rich-thumbnail-uploader-x86.exe` on 32-bit Windows.
 
 ## Quick Setup
 
 Clone and build (needs `rustup`; the pinned nightly and `rust-src` are installed automatically):
+
 ```bash
 git clone https://github.com/cod3ddot/rich-thumbnail-uploader
 cd rich-thumbnail-uploader
@@ -69,12 +73,12 @@ cargo build --release --target i686-win7-windows-msvc  # 32-bit
 ```
 
 ## Usage
+
 1. Save executable on disk
 2. File -> Preferences -> Discord Rich Presence Integration -> Advanced
 3. Set upload command as the path to the executable, with any options you would like
 
 Example: `C:\Users\user\rich-thumbnail-uploader.exe -s catbox -f webp`
-
 
 ## Options
 
@@ -96,11 +100,13 @@ OPTIONS:
     -h, --help                 Print help information
     -V, --version              Print version information
 ```
+
 ## License
 
 This project strives to be [REUSE](https://reuse.software/) compliant.
 
 Generally:
+
 - Documentation is licensed under CC-BY-NC-SA-4.0
 - Code is licensed under AGPL-3.0-or-later
 - Config files are under CC0-1.0
