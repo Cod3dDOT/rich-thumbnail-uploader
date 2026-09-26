@@ -128,7 +128,7 @@ jobs:
       - name: Run UPX to reduce binary size
         uses: crazy-max/ghaction-upx@c83f378efc804f828e988debb88ed6116feb2368 # v4.0.0
         with:
-          version: v5.2.1
+          version: v5.2.0
           files: "./bin/*.exe"
           args: -q --best --lzma
 
