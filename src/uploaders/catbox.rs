@@ -32,6 +32,7 @@ impl UploadServiceImplementation for CatboxUploader {
 
 		let response = attohttpc::post("https://catbox.moe/user/api.php")
 			.connect_timeout(std::time::Duration::from_secs(timeout.into()))
+			.timeout(std::time::Duration::from_secs(timeout.into()))
 			.header("User-Agent", user_agent)
 			.body(part)
 			.send()?;

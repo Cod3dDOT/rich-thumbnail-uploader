@@ -20,6 +20,9 @@ pub(crate) enum AppError {
 	#[error("HTTP error: {0}")]
 	Http(#[from] attohttpc::Error),
 
+	#[error("Upload timed out after {0} s")]
+	Timeout(u8),
+
 	#[error("Configuration error: {0}")]
 	Config(&'static str),
 

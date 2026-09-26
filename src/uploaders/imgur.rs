@@ -30,6 +30,7 @@ impl UploadServiceImplementation for ImgurUploader {
 
 		let response = attohttpc::post("https://api.imgur.com/3/image")
 			.connect_timeout(std::time::Duration::from_secs(timeout.into()))
+			.timeout(std::time::Duration::from_secs(timeout.into()))
 			.header("Authorization", format!("Client-ID {client_id}"))
 			.header("User-Agent", user_agent)
 			.body(part)

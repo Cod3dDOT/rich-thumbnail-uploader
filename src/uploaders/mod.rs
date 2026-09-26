@@ -48,13 +48,23 @@ pub(crate) fn upload(
 		_ => "thumb.dat",
 	};
 
-	match service {
+	let start = std::time::Instant::now();
+	let result = match service {
 		UploadService::Imgur => {
 			imgur::ImgurUploader::upload(filename, image, client_id, user_agent, timeout)
 		}
 		UploadService::Catbox => {
 			catbox::CatboxUploader::upload(filename, image, client_id, user_agent, timeout)
 		}
+	};
+
+	// On deadline attohttpc closes the socket, surfacing as an arbitrary socket
+	// error
+	match result {
+		Err(AppError::Http(_)) if start.elapsed().as_secs() >= timeout.into() => {
+			Err(AppError::Timeout(timeout))
+		}
+		result => result,
 	}
 }
 
