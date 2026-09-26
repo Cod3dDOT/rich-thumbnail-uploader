@@ -98,7 +98,7 @@ OPTIONS:
         --uid <UID>            Imgur client ID or catbox userhash
         --timeout <SECONDS>    Network timeout (1-255) [default: 10]
     -h, --help                 Print help information
-    -V, --version              Print version information
+    -v, --version              Print version information
 ```
 
 ## License

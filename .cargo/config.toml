@@ -5,6 +5,12 @@ target = "x86_64-win7-windows-msvc"
 [unstable]
 build-std = ["std", "panic_abort"]
 
+# Link the C runtime statically: no VC++ redistributable needed, and Windows 7
+# does not ship the UCRT. Its libs reference PDBs that are never shipped
+# (LNK4099), which would fail builds with warnings denied.
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-Ctarget-feature=+crt-static", "-Clink-arg=/IGNORE:4099"]
+
 [target.x86_64-win7-windows-msvc]
 linker = "rust-lld"
 

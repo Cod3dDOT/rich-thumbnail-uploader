@@ -5,50 +5,67 @@ on:
     branches:
       - main
     tags:
-      - "*"
+      - "v*"
+  pull_request:
   workflow_dispatch:
 
 # Dependency build scripts run here; only the release job gets write access.
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
-  check-reuse:
-    name: Check REUSE compliance
+  check-repo:
+    name: REUSE compliance and release version
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: fsfe/reuse-action@v6
+      - uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
+
+      - name: Check tag matches Cargo.toml and CHANGES.md
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match Cargo.toml version $version"
+            exit 1
+          fi
+          if ! grep -qF "## [$version]" CHANGES.md; then
+            echo "::error::CHANGES.md has no '## [$version]' section"
+            exit 1
+          fi
 
   check-style:
     name: Clippy, fmt, tests
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
-            cache-shared-key: "check-style" # propagates to Swatinem/rust-cache
-            rustflags: "" # Disable default rustflags to avoid conflicts
+          cache-shared-key: "check-style" # propagates to Swatinem/rust-cache
 
       - name: Run format check
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --locked --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets --target x86_64-win7-windows-msvc --target i686-win7-windows-msvc -- -D warnings
 
       - name: Run tests
         run: cargo test --locked
 
   build:
     name: Build binary (${{ matrix.target }})
-    needs: [check-reuse, check-style]
+    needs: [check-repo, check-style]
     runs-on: windows-latest
     timeout-minutes: 10
     strategy:
@@ -59,19 +76,21 @@ jobs:
           - target: i686-win7-windows-msvc
             exe: rich-thumbnail-uploader-x86.exe
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
-            cache-shared-key: "build-${{ matrix.target }}" # propagates to Swatinem/rust-cache
-            rustflags: "" # Disable default rustflags to avoid conflicts
+          cache-shared-key: "build-${{ matrix.target }}" # propagates to Swatinem/rust-cache
+          # Released binaries are built from scratch
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
+      # Size flags on top of .cargo/config.toml; RUSTFLAGS would replace its
+      # crt-static instead of adding to it.
       - name: Build release binary
         run: |
-          set RUSTFLAGS=-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort -Ctarget-feature=+crt-static
-          cargo build --locked -Z build-std-features=optimize_for_size --release --target ${{ matrix.target }} || exit /b 1
+          cargo build --locked -Z build-std-features=optimize_for_size --release --target ${{ matrix.target }} --config "target.'cfg(all())'.rustflags=['-Zlocation-detail=none', '-Zunstable-options', '-Cpanic=immediate-abort']" || exit /b 1
           copy target\${{ matrix.target }}\release\rich-thumbnail-uploader.exe ${{ matrix.exe }}
         shell:
             cmd
@@ -79,10 +98,11 @@ jobs:
           IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.exe }}
           path: ${{ matrix.exe }}
+          retention-days: 7
 
   create-release:
     name: Publish release
@@ -95,68 +115,61 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Download binary artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: ./bin
           merge-multiple: true
 
       - name: Run UPX to reduce binary size
-        uses: crazy-max/ghaction-upx@v3
+        uses: crazy-max/ghaction-upx@c83f378efc804f828e988debb88ed6116feb2368 # v4.0.0
         with:
           version: v5.2.1
           files: "./bin/*.exe"
           args: -q --best --lzma
 
-      - name: Generate SHA256 checksums
-        run: |
-          cd ./bin
-          for f in *.exe; do sha256sum "$f" > "$f.sha256"; done
+      - name: Generate checksums
+        working-directory: bin
+        run: sha256sum *.exe > SHA256SUMS
 
       - name: Import GPG
         id: gpg
-        uses: crazy-max/ghaction-import-gpg@v6
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_SIGNING_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Sign the checksum files
-        run: |
-          cd bin
-          export GPG_TTY="$(tty)"
-          for f in *.sha256; do
-            gpg --batch --yes \
-                --local-user "${{ steps.gpg.outputs.fingerprint }}" \
-                --output "$f.asc" \
-                --detach-sign "$f"
-          done
+      - name: Sign checksums
+        working-directory: bin
+        run: >
+          gpg --batch --yes --armor --detach-sign
+          --local-user "${{ steps.gpg.outputs.fingerprint }}"
+          --output SHA256SUMS.asc SHA256SUMS
 
       - name: Generate release attestation
         id: attest
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: bin/*.exe
 
-      - name: Extract latest changelog entry
+      - name: Extract release notes
         run: |
-          if [ -f CHANGES.md ]; then
-            awk '/^## \[/ { if (found) exit; found=1 } found' CHANGES.md > latest_changes.md
-          else
-            echo "Release ${{ github.ref_name }}" > latest_changes.md
-          fi
+          awk -v heading="## [${GITHUB_REF_NAME#v}]" '
+            index($0, heading) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found
+          ' CHANGES.md > release_notes.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
             bin/*.exe
-            bin/*.sha256
-            bin/*.sha256.asc
+            bin/SHA256SUMS
+            bin/SHA256SUMS.asc
             ${{ steps.attest.outputs.bundle-path }}
-          body_path: latest_changes.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          body_path: release_notes.md

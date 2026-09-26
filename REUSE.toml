@@ -10,6 +10,7 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 [[annotations]]
 path = [
+    ".github/dependabot.yml",
     ".gitignore",
     ".gitattributes",
     "Cargo.lock",

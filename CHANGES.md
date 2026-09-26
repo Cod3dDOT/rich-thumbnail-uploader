@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-09-26
+
+Exactly 11 month later, a little nice update with Windows 7 and 32-bit support and GIF/BMP support, along with a couple of bug fixes.
 
 ### Added
 
@@ -18,9 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Binary required Windows 10; now runs on Windows 7+ like foobar2000 (built for `*-win7-windows-msvc`)
 - Application manifest now declares Windows 7/8/8.1 support
 - Invalid `--service`/`--format`, out-of-range `--quality`/`--timeout`, and unknown or misspelled arguments are now errors instead of being silently replaced with defaults or ignored
-- `-V` prints the version, as documented (`-v` is no longer accepted)
+- Help and README documented `-V` for the version, but only `-v` works; they now document `-v`
 - Help and README now document `-q/--quality`, `--timeout` and the `jpeg` format
 - `--timeout` now limits the whole upload
+- Local builds (`cargo build --release`) now link the C runtime statically like release builds, instead of requiring the VC++ redistributable
 
 ### Changed
 
