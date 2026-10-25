@@ -26,9 +26,9 @@ Inspired by [rust-imgur-upload](https://github.com/s0hv/rust-imgur-upload).
 
 |                  | JPEG | PNG | WEBP * | GIF * | BMP |
 | ---------------- | ---- | --- | ------ | ----- | --- |
-| Input artwork    | [x]  | [x] | [x]    | [x]   | [x] |
-| Upload to Imgur  | [x]  | [x] | [ ]    | [ ]   | [ ] |
-| Upload to Catbox | [x]  | [x] | [x]    | [ ]   | [ ] |
+| Input artwork    | ✓    | ✓   | ✓      | ✓     | ✓   |
+| Upload to Imgur  | ✓    | ✓   | –      | –     | –   |
+| Upload to Catbox | ✓    | ✓   | ✓      | –     | –   |
 
 \* Animated images: first frame only.
 
